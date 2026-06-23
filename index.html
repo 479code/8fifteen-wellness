@@ -581,50 +581,18 @@ function renderSyncBadge() {
 const CATS = ["Beauty","Personal Care","Tea","General"];
 const CAT_CLR = {Beauty:"#9C7A3C","Personal Care":"#6B7355",Tea:"#8C5A46",General:"#5B6B73"};
 
-let products = [
-  {id:"p1",sku:"BTY-001",name:"Shea Glow Body Butter",category:"Beauty",cost:2500,price:4500,stock:18,low:8},
-  {id:"p2",sku:"BTY-002",name:"Rosewater Facial Mist",category:"Beauty",cost:1800,price:3200,stock:5,low:6},
-  {id:"p3",sku:"BTY-003",name:"Charcoal Clay Mask",category:"Beauty",cost:2600,price:5000,stock:12,low:5},
-  {id:"p4",sku:"BTY-004",name:"Vitamin C Serum 30ml",category:"Beauty",cost:5000,price:8500,stock:3,low:5},
-  {id:"p5",sku:"PC-001",name:"Coconut & Aloe Body Wash",category:"Personal Care",cost:1600,price:2800,stock:24,low:10},
-  {id:"p6",sku:"PC-002",name:"Bamboo Toothbrush Set",category:"Personal Care",cost:800,price:1500,stock:30,low:10},
-  {id:"p7",sku:"PC-003",name:"Lavender Hand Cream",category:"Personal Care",cost:1200,price:2200,stock:7,low:8},
-  {id:"p8",sku:"PC-004",name:"Unscented Bar Soap",category:"Personal Care",cost:450,price:900,stock:40,low:15},
-  {id:"p9",sku:"TEA-001",name:"Hibiscus & Ginger Loose Tea",category:"Tea",cost:1600,price:3000,stock:14,low:6},
-  {id:"p10",sku:"TEA-002",name:"Moringa Green Tea Bags (20s)",category:"Tea",cost:1400,price:2600,stock:2,low:6},
-  {id:"p11",sku:"TEA-003",name:"Chamomile Sleep Blend",category:"Tea",cost:1500,price:2900,stock:9,low:6},
-  {id:"p12",sku:"TEA-004",name:"Lemongrass & Mint Tea",category:"Tea",cost:1400,price:2700,stock:16,low:6},
-  {id:"p13",sku:"GEN-001",name:"Reusable Glass Tumbler",category:"General",cost:2000,price:3500,stock:11,low:5},
-  {id:"p14",sku:"GEN-002",name:"Tote Bag — 8fifteen Print",category:"General",cost:2200,price:4000,stock:6,low:5},
-  {id:"p15",sku:"GEN-003",name:"Scented Soy Candle",category:"General",cost:2800,price:5500,stock:4,low:6},
-];
-let users = [
+/* ── Data — starts empty, populated from Google Sheets or manual entry ── */
+let products = [];
+let users    = [
   {id:"u1",name:"Uthman Muhammad",email:"admin@8fifteenwellness.com",role:"Admin"},
-  {id:"u2",name:"Amaka Obi",email:"amaka@8fifteenwellness.com",role:"Staff"},
-  {id:"u3",name:"Tunde Bakare",email:"tunde@8fifteenwellness.com",role:"Staff"},
 ];
 function dStr(n){const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10);}
 const TODAY=dStr(0), YDAY=dStr(1);
-function mkSale(rc,date,time,items,payment,staff){
-  const lines=items.map(it=>{const p=products.find(x=>x.id===it.id);return{productId:p.id,name:p.name,category:p.category,qty:it.qty,price:p.price,cost:p.cost};});
-  const total=lines.reduce((s,l)=>s+l.price*l.qty,0),cost=lines.reduce((s,l)=>s+l.cost*l.qty,0);
-  return{id:"s_"+rc,receipt:rc,date,time,items:lines,payment,staff,total,cost,profit:total-cost};
-}
-let sales=[
-  mkSale("8FW-1001",YDAY,"16:40",[{id:"p1",qty:1},{id:"p9",qty:2}],"Cash","Amaka Obi"),
-  mkSale("8FW-1002",YDAY,"17:15",[{id:"p6",qty:3},{id:"p8",qty:2}],"Transfer","Tunde Bakare"),
-  mkSale("8FW-1003",TODAY,"08:05",[{id:"p1",qty:1}],"Cash","Amaka Obi"),
-  mkSale("8FW-1004",TODAY,"08:40",[{id:"p11",qty:1},{id:"p13",qty:1}],"Card","Tunde Bakare"),
-  mkSale("8FW-1005",TODAY,"09:10",[{id:"p3",qty:1},{id:"p5",qty:2}],"Cash","Amaka Obi"),
-];
-let rcCounter=1006;
-let expenses=[
-  {id:"e1",date:YDAY,description:"Packaging supplies",category:"Supplies",amount:2500},
-  {id:"e2",date:TODAY,description:"Electricity (shop)",category:"Utilities",amount:8000},
-  {id:"e3",date:TODAY,description:"Logistics / transport",category:"Transport",amount:3500},
-];
-let expCounter=4;
-let stockLog=[];
+let sales      = [];
+let rcCounter  = 1001;
+let expenses   = [];
+let expCounter = 1;
+let stockLog   = [];
 
 /* ── State ── */
 const S={
@@ -647,13 +615,15 @@ const TITLE={dashboard:"Today's overview",inventory:"Inventory",sales:"Sales ent
 /* ── Auth ── */
 const CREDS = [
   {email:"admin@8fifteenwellness.com", password:"ChangeMe123!", role:"Admin", name:"Uthman Muhammad"},
-  {email:"amaka@8fifteenwellness.com",  password:"staff123",     role:"Staff", name:"Amaka Obi"},
-  {email:"tunde@8fifteenwellness.com",  password:"staff123",     role:"Staff", name:"Tunde Bakare"},
 ];
 function tryLogin(email, pw){
+  // Also check against Users list for staff (password is staff123 by default, or set via change password)
   const cred = CREDS.find(c=>c.email.toLowerCase()===email.toLowerCase().trim() && c.password===pw);
-  if(!cred) return null;
-  return {name:cred.name, email:cred.email, role:cred.role};
+  if(cred) return {name:cred.name, email:cred.email, role:cred.role};
+  // Check dynamic users list (staff added via Users panel use password "staff123" until changed)
+  const u = users.find(u=>u.email.toLowerCase()===email.toLowerCase().trim() && u.role==="Staff");
+  if(u && pw==="staff123") return {name:u.name, email:u.email, role:u.role};
+  return null;
 }
 function doLogin(user){
   S.loggedIn=true; S.currentUser=user;
@@ -678,8 +648,13 @@ function changePassword(){
   document.getElementById("cp-confirm").value="";
 }
 function demoLogin(role){
-  const cred = role==="admin"?CREDS[0]:CREDS[1];
+  const cred=CREDS[0]; // admin only
   doLogin({name:cred.name,email:cred.email,role:cred.role});
+}
+function quickLoginStaff(userId){
+  const u=users.find(x=>x.id===userId);
+  if(u) doLogin({name:u.name,email:u.email,role:u.role});
+  closeModal();
 }
 
 /* ── Aggregates ── */
@@ -790,7 +765,7 @@ function renderLogin(){
         <button class="login-demo" onclick="openDemoSheet()">Continue with demo account</button>
         <div class="login-hint">
           Admin: <b>admin@8fifteenwellness.com</b> / <b>ChangeMe123!</b><br/>
-          Staff email / <b>staff123</b>
+          Staff: use email added in Users + <b>staff123</b>
         </div>
       </div>
     </div>`;
@@ -804,17 +779,25 @@ function renderDemoSheet(){
     <div class="overlay" onclick="closeModal()"></div>
     <div class="sheet">
       <div class="sheet-handle"></div>
-      <div class="sheet-head"><h3>Demo accounts</h3><button class="icon-btn" onclick="closeModal()">${icon("x",13)}</button></div>
+      <div class="sheet-head"><h3>Sign in as</h3><button class="icon-btn" onclick="closeModal()">${icon("x",13)}</button></div>
       <div style="padding:8px 0">
         <button class="more-nav-item" onclick="demoLogin('admin')">
           ${icon("users",18)}
-          <div><div style="font-weight:700">Admin — Uthman Muhammad</div><div style="font-size:11px;color:var(--muted)">Full access · admin@8fifteenwellness.com</div></div>
+          <div>
+            <div style="font-weight:700">Uthman Muhammad</div>
+            <div style="font-size:11px;color:var(--muted)">Admin · admin@8fifteenwellness.com</div>
+          </div>
         </button>
-        <button class="more-nav-item" onclick="demoLogin('staff')">
+        ${users.filter(u=>u.role==="Staff").map(u=>`
+        <button class="more-nav-item" onclick="quickLoginStaff('${u.id}')">
           ${icon("cart",18)}
-          <div><div style="font-weight:700">Staff — Amaka Obi</div><div style="font-size:11px;color:var(--muted)">Sales &amp; stock only · amaka@8fifteenwellness.com</div></div>
-        </button>
+          <div>
+            <div style="font-weight:700">${u.name}</div>
+            <div style="font-size:11px;color:var(--muted)">Staff · ${u.email}</div>
+          </div>
+        </button>`).join("")}
       </div>
+      <div style="padding:10px 20px 4px;font-size:11.5px;color:var(--muted)">Staff default password is <b>staff123</b></div>
     </div>`;
 }
 function openDemoSheet(){ S.modal={type:"demoSheet"}; renderDemoSheet(); }
@@ -917,8 +900,26 @@ function renderDash(){
     return `<span style="font-size:10.5px;font-weight:700;color:${up?'var(--success)':'var(--danger)'};margin-left:5px">${up?'↑':'↓'}${Math.abs(pct).toFixed(0)}% vs yesterday</span>`;
   }
   const hour = new Date().getHours();
-  const greeting = hour<12?"Good morning":"hour<17?'Good afternoon':'Good evening'";
   const greet = hour<12?"Good morning":hour<17?"Good afternoon":"Good evening";
+
+  // Empty state — no products yet
+  if(products.length===0) return`
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Bodoni Moda',serif;font-size:18px;font-weight:600">${greet}, ${S.currentUser?S.currentUser.name.split(' ')[0]:''}.</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-top:2px">Let's get your store set up.</div>
+    </div>
+    <div style="background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:36px 24px;text-align:center;animation:fadeUp .4s ease both">
+      <div style="font-size:36px;margin-bottom:12px">🌿</div>
+      <div style="font-family:'Bodoni Moda',serif;font-size:20px;font-weight:600;margin-bottom:8px">Welcome to 8fifteen Wellness</div>
+      <div style="font-size:13.5px;color:var(--muted);line-height:1.7;max-width:360px;margin:0 auto 22px">
+        Your system is clean and ready. Start by adding your products to inventory — sales, reports and analytics will populate as you use it.
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        ${adm?`<button class="btn btn-primary" onclick="go('inventory');openModal('addProduct')">${icon("plus",13)} Add first product</button>`:''}
+        <button class="btn btn-ghost" onclick="go('settings')">${icon("settings",13)} Connect Google Sheets</button>
+      </div>
+    </div>`;
+
   return`
     <div style="margin-bottom:16px">
       <div style="font-family:'Bodoni Moda',serif;font-size:18px;font-weight:600">${greet}, ${S.currentUser?S.currentUser.name.split(' ')[0]:''}.</div>
@@ -1366,7 +1367,7 @@ function renderSettings(){
         <div class="pl-row"><span>Team members</span><span class="mono">${users.length}</span></div>
         <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
           <button class="btn btn-ghost" onclick="reloadFromSheets()">${icon('refresh',12)} Reload from sheet</button>
-          ${products.length===0?`<button class="btn btn-ghost" onclick="seedSheetDemo()">${icon('plus',12)} Seed demo products</button>`:''}
+          
         </div>
       </div>
     </div>`:''}
