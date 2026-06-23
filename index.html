@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#131210"/>
 <title>8fifteen Wellness</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23131210'/%3E%3Ccircle cx='50' cy='50' r='46' fill='none' stroke='%23C9A766' stroke-width='2'/%3E%3Ccircle cx='50' cy='50' r='39' fill='none' stroke='%23C9A766' stroke-width='0.8' opacity='0.5'/%3E%3Ctext x='50' y='64' font-family='Georgia%2Cserif' font-size='34' font-weight='bold' text-anchor='middle' fill='%23C9A766'%3E815%3C/text%3E%3C/svg%3E"/>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23131210'/%3E%3Ccircle cx='50' cy='50' r='46' fill='none' stroke='%23C9A766' stroke-width='2'/%3E%3Ctext x='50' y='64' font-family='Georgia%2Cserif' font-size='34' font-weight='bold' text-anchor='middle' fill='%23C9A766'%3E815%3C/text%3E%3C/svg%3E"/>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600;6..96,700&family=Archivo:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -259,99 +262,151 @@ body.dark .margin-preview b{color:var(--accent);}
 ═══════════════════════════════════════════════ */
 @media(max-width:680px){
 
-  /* Hide desktop sidebar, show hamburger */
+  /* ── Sidebar drawer ── */
   .sidebar{
-    position:fixed;top:0;left:0;bottom:0;width:82%;max-width:290px;
+    position:fixed;top:0;left:0;bottom:0;width:84%;max-width:300px;
     transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
-    z-index:300;padding-top:calc(22px + var(--safe-top));
-    padding-bottom:calc(18px + var(--safe-bottom));
+    z-index:300;padding-top:calc(20px + var(--safe-top));
+    padding-bottom:calc(20px + var(--safe-bottom));
+    overflow-y:auto;
   }
   .sidebar.open{transform:translateX(0);}
   .hamburger{display:flex;}
   .sidebar-close-btn{
-    display:flex;position:absolute;top:calc(16px + var(--safe-top));right:14px;
-    width:32px;height:32px;border-radius:7px;border:1px solid rgba(239,233,218,.15);
+    display:flex;position:absolute;top:calc(14px + var(--safe-top));right:14px;
+    width:34px;height:34px;border-radius:8px;border:1px solid rgba(239,233,218,.15);
     background:transparent;color:var(--nav-txt);align-items:center;justify-content:center;
   }
+  .nav-btn{padding:13px 12px;font-size:14px;min-height:48px;}
 
-  /* Topbar */
-  .topbar{padding:12px 16px;padding-top:calc(12px + var(--safe-top));}
-  .topbar h1{font-size:17px;}
+  /* ── Topbar ── */
+  .topbar{padding:12px 16px;padding-top:calc(12px + var(--safe-top));gap:8px;}
+  .topbar h1{font-size:16.5px;}
   .topbar-sub{display:none;}
   .role-toggle{display:none;}
+  .icon-action{width:40px;height:40px;}
 
-  /* Content */
-  .content{padding:14px 14px calc(80px + var(--safe-bottom));scroll-padding-bottom:80px;}
+  /* ── Content area ── */
+  .content{padding:14px 14px calc(84px + var(--safe-bottom)) 14px;}
 
-  /* Stats */
-  .stat-grid,.kpi-grid{grid-template-columns:repeat(2,1fr);gap:9px;}
+  /* ── Stat/KPI grids ── */
+  .stat-grid,.kpi-grid{grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:14px;}
   .cat-grid{grid-template-columns:1fr 1fr;gap:9px;}
   .stat-card,.cat-card{padding:12px;}
-  .stat-value{font-size:19px;}
+  .stat-value{font-size:18px;}
+  .stat-label{font-size:10px;}
   .two-col{grid-template-columns:1fr;}
+  .report-grid{grid-template-columns:1fr;}
 
-  /* Tables → cards */
+  /* ── Tables → hide on mobile, show data-cards ── */
   .table-wrap table{display:none;}
   .data-cards{display:block;}
 
-  /* Toolbar */
+  /* ── Toolbar / filters ── */
   .toolbar{flex-direction:column;gap:8px;}
-  .search-box{max-width:none;}
-  .chip-row{width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px;
-    scrollbar-width:none;-ms-overflow-style:none;}
+  .search-box{max-width:none;min-height:44px;}
+  .search-box input{font-size:16px;} /* prevent iOS auto-zoom */
+  .chip-row{
+    width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:3px;
+    scrollbar-width:none;-ms-overflow-style:none;gap:7px;
+  }
   .chip-row::-webkit-scrollbar{display:none;}
-  .chip{flex-shrink:0;}
+  .chip{flex-shrink:0;padding:9px 16px;font-size:12.5px;min-height:38px;}
+  .date-input{font-size:16px;padding:10px;min-height:44px;}
 
-  /* Sales */
-  .sale-meta{flex-direction:column;gap:12px;}
-  .sale-foot{flex-direction:column;gap:10px;}
-  .sale-foot .btn{width:100%;justify-content:center;padding:13px 16px;font-size:14px;}
+  /* ── Buttons — larger touch targets ── */
+  .btn{min-height:44px;padding:10px 16px;}
+  .btn-sm{min-height:38px;padding:8px 13px;font-size:12px;}
+  .icon-btn{width:36px;height:36px;}
+
+  /* ── Panel heads ── */
+  .panel-head{padding:12px 15px;flex-wrap:wrap;gap:8px;}
+
+  /* ── Sales entry ── */
+  .sale-meta{flex-direction:column;gap:14px;padding:14px 15px;}
+  .sale-meta>div{width:100%;}
+  .pay-chips{gap:8px;}
+  .pay-chips .chip{flex:1;text-align:center;justify-content:center;min-height:42px;}
+  .sale-foot{flex-direction:column;gap:10px;padding:14px 15px;}
+  .sale-foot .btn{width:100%;justify-content:center;min-height:50px;font-size:15px;}
   .sale-total-area{width:100%;}
-  .row-select{font-size:14px;padding:11px 10px;}
-  .row-qty{width:74px;font-size:14px;padding:11px 10px;}
-  td.row-actions{white-space:nowrap;}
+  .picker-input{font-size:16px;min-height:46px;} /* prevent iOS zoom */
+  .picker-selected{min-height:46px;}
+  .row-qty{font-size:16px;min-height:44px;width:80px;}
 
-  /* Bottom nav bar */
+  /* ── History ── */
+  .data-card{padding:14px;border-radius:var(--r-sm);margin-bottom:10px;}
+  .dc-title{font-size:14.5px;}
+
+  /* ── Bottom nav ── */
   .bottom-nav{
     display:flex;position:fixed;bottom:0;left:0;right:0;
     background:var(--nav-bg);
-    padding:8px 0 calc(8px + var(--safe-bottom));
-    border-top:1px solid rgba(239,233,218,.1);z-index:200;
+    padding:6px 0 calc(6px + var(--safe-bottom));
+    border-top:1px solid rgba(239,233,218,.12);z-index:200;
+    box-shadow:0 -4px 20px rgba(0,0,0,.25);
   }
   .bnav-btn{
     flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
-    padding:4px 2px;border:none;background:transparent;color:var(--nav-muted);
-    font-size:10px;font-weight:600;letter-spacing:.03em;transition:color .15s;
+    padding:6px 4px;border:none;background:transparent;color:var(--nav-muted);
+    font-size:10px;font-weight:600;letter-spacing:.03em;
+    transition:color .15s,transform .1s;min-height:52px;justify-content:center;
   }
   .bnav-btn.active{color:var(--nav-act);}
+  .bnav-btn:active{transform:scale(.9);}
   .bnav-btn svg{width:22px;height:22px;}
-  .bnav-more-dot{width:5px;height:5px;border-radius:50%;background:var(--nav-muted);margin:7px auto 0;}
-  .bnav-btn.active .bnav-more-dot{background:var(--nav-act);}
 
-  /* Modals become full bottom sheet */
-  .sheet{border-radius:24px 24px 0 0;}
+  /* ── Bottom sheets / modals ── */
+  .sheet{border-radius:22px 22px 0 0;max-height:94dvh;}
+  .sheet-head{padding:15px 19px;}
+  .sheet-body{padding:16px 19px;}
   .field-row{grid-template-columns:1fr;}
-  .field input,.field select{font-size:16px;padding:13px 12px;}/* prevents iOS zoom */
-  .sheet-foot .btn{flex:1;justify-content:center;padding:13px;}
+  .field input,.field select{font-size:16px;padding:13px 12px;min-height:48px;}
+  .field label{font-size:11px;}
+  .sheet-foot{padding:14px 19px;gap:10px;}
+  .sheet-foot .btn{flex:1;justify-content:center;min-height:48px;}
 
-  /* Toast above bottom nav */
-  .toast{bottom:calc(80px + var(--safe-bottom));}
+  /* ── Toast ── */
+  .toast{
+    bottom:calc(78px + var(--safe-bottom));
+    left:14px;right:14px;transform:none;
+    width:auto;border-radius:10px;
+    animation:fadeUp .25s ease both;
+  }
 
-  /* More menu sheet */
+  /* ── More menu ── */
   .more-nav-item{
-    display:flex;align-items:center;gap:14px;width:100%;padding:15px 20px;
-    border:none;background:transparent;color:var(--ink);font-size:15px;font-weight:500;
-    border-bottom:1px solid var(--line);text-align:left;transition:background .12s;
+    display:flex;align-items:center;gap:14px;width:100%;
+    padding:16px 20px;min-height:56px;
+    border:none;background:transparent;color:var(--ink);
+    font-size:15px;font-weight:500;border-bottom:1px solid var(--line);
+    text-align:left;transition:background .12s;
   }
   .more-nav-item:last-child{border-bottom:none;}
   .more-nav-item:active{background:var(--bg);}
   .more-nav-item.active{color:var(--accent);font-weight:700;}
   .more-nav-item svg{flex-shrink:0;color:var(--muted);}
   .more-nav-item.active svg{color:var(--accent);}
+
+  /* ── Login ── */
+  .login-card{padding:28px 22px;}
+  .login-field input{font-size:16px;} /* prevent iOS zoom */
+
+  /* ── Settings ── */
+  .pl-row{flex-wrap:wrap;}
+
+  /* ── Prevent overflow ── */
+  .content > .view-enter,
+  .panel, .stat-card, .cat-card, .chart-panel{
+    max-width:100%;overflow-x:hidden;
+  }
 }
 
 @media(max-width:380px){
   .stat-grid,.kpi-grid,.cat-grid{grid-template-columns:1fr;}
+  .bnav-btn{font-size:9px;}
+  .bnav-btn svg{width:20px;height:20px;}
+  .topbar h1{font-size:15px;}
 }
 
 /* ─── Login screen ─── */
@@ -493,6 +548,7 @@ const I = {
   check:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
   alert:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.3 3.9-8 14A1.6 1.6 0 0 0 3.7 20h16.6a1.6 1.6 0 0 0 1.4-2.4l-8-14a1.6 1.6 0 0 0-2.8 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
   trend:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`,
+  chevron:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`,
   edit:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`,
   trash:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`,
   refresh:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>`,
@@ -578,8 +634,15 @@ function renderSyncBadge() {
 }
 
 /* ── Data ── */
-const CATS = ["Beauty","Personal Care","Tea","General"];
-const CAT_CLR = {Beauty:"#9C7A3C","Personal Care":"#6B7355",Tea:"#8C5A46",General:"#5B6B73"};
+let CATS_DATA = [
+  {name:"Beauty",        color:"#9C7A3C", subs:[]},
+  {name:"Personal Care", color:"#6B7355", subs:[]},
+  {name:"Tea",           color:"#8C5A46", subs:[]},
+  {name:"General",       color:"#5B6B73", subs:[]},
+];
+let CATS = CATS_DATA.map(c=>c.name);
+let CAT_CLR = Object.fromEntries(CATS_DATA.map(c=>[c.name,c.color]));
+function syncCats(){ CATS=CATS_DATA.map(c=>c.name); CAT_CLR=Object.fromEntries(CATS_DATA.map(c=>[c.name,c.color])); }
 
 /* ── Data — starts empty, populated from Google Sheets or manual entry ── */
 let products = [];
@@ -600,9 +663,9 @@ const S={
   loggedIn:false, currentUser:null,
   drawerOpen:false,moreSheetOpen:false,
   invSearch:"",invCat:"All",
-  saleRows:[{rowId:"row_1",productId:"",qty:1,search:"",open:false}],payment:"Cash",discount:0,
+  saleRows:[{rowId:"row_1",productId:"",qty:1,search:"",open:false}],payment:"Cash",discount:0,customerName:"",
   histSearch:"",histFrom:"",histTo:"",histCat:"All",
-  modal:null, receiptSale:null,
+  modal:null, receiptSale:null, showConnectionForm:false, accPeriod:'all',
 };
 
 /* ── Helpers ── */
@@ -1042,22 +1105,19 @@ function renderSales(){
     const p=products.find(x=>x.id===r.productId);
     const up=p?p.price:0,qty=p?r.qty:0,lt=up*qty;
     if(p){sub+=lt;}
-    const srch=(r.search||"").toLowerCase();
-    const filtered=r.open?products.filter(px=>px.stock>0&&(px.name.toLowerCase().includes(srch)||px.sku.toLowerCase().includes(srch)||px.category.toLowerCase().includes(srch))).slice(0,8):[];
     const picker = r.productId&&!r.open
       ?`<div class="picker-selected">
-          <span class="ps-name">${p.name}</span>
+          <span class="ps-name">${p.name}${p&&p.subcategory?` <small style="color:var(--muted)">· ${p.subcategory}</small>`:''}</span>
           <span class="ps-price mono">${N(up)}</span>
           <button class="ps-clear" onclick="clearPickerSelection('${r.rowId}')">${icon("x",9)}</button>
         </div>`
       :`<div class="picker-wrap">
-          <input id="pk_${r.rowId}" class="picker-input" placeholder="Search by name or SKU…"
+          <input id="pk_${r.rowId}" class="picker-input" placeholder="Search product by name or SKU…"
             value="${r.search||""}"
             oninput="setPickerSearch('${r.rowId}',this.value)"
             onfocus="openPicker('${r.rowId}')"
             onblur="closePicker('${r.rowId}')"/>
-          ${r.open&&filtered.length?`<div class="picker-dropdown">${filtered.map(px=>`<div class="picker-item" onmousedown="selectFromPicker('${r.rowId}','${px.id}')"><div class="pi-name">${px.name}</div><div class="pi-meta">${px.category} · <span class="pi-price">${N(px.price)}</span> · ${px.stock} in stock</div></div>`).join("")}</div>`:""}
-          ${r.open&&r.search&&!filtered.length?`<div class="picker-dropdown"><div style="padding:14px;text-align:center;color:var(--muted);font-size:12.5px">No results for "${r.search}"</div></div>`:""}
+          <div id="pkd_${r.rowId}" class="picker-dropdown" style="display:none"></div>
         </div>`;
     return{picker,p,up,lt,qty};
   }
@@ -1075,6 +1135,13 @@ function renderSales(){
           </div>
         </div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
+          <div>
+            <div class="s-label">Customer name <span style="color:var(--muted);font-weight:400">(optional)</span></div>
+            <input type="text" placeholder="e.g. Mrs Adeyemi"
+              value="${S.customerName||''}"
+              oninput="S.customerName=this.value"
+              style="padding:8px 11px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);color:var(--ink);font-size:13px;width:180px"/>
+          </div>
           <div>
             <div class="s-label">Discount %</div>
             <div style="display:flex;align-items:center;gap:8px">
@@ -1165,28 +1232,32 @@ function renderHistory(){
     <!-- Desktop table -->
     <div class="panel">
       <div class="table-wrap"><table><thead><tr>
-        <th>Receipt</th><th>Date</th><th>Time</th><th>Items</th><th>Payment</th><th>Total</th>${adm?"<th>Cost</th><th>Profit</th>":""}<th>Staff</th>
+        <th>Receipt</th><th>Date</th><th>Time</th><th>Items</th><th>Payment</th><th>Customer</th><th>Total</th>${adm?"<th>Cost</th><th>Profit</th>":""}<th>Staff</th><th></th>
       </tr></thead><tbody>
         ${list.length===0?`<tr class="empty-row"><td colspan="9">No sales match.</td></tr>`:
-          list.map(s=>`<tr>
-            <td class="mono">${s.receipt}</td><td class="mono">${fmt(s.date)}</td><td class="mono">${s.time}</td>
+          list.map(s=>`<tr style="cursor:pointer" onclick="openModal('receipt',null);S.modal={type:'receipt',sale:${JSON.stringify(s).replace(/`/g,"'")}}; renderModal()">
+            <td class="mono" style="color:var(--accent);font-weight:700">${s.receipt}</td>
+            <td class="mono">${fmt(s.date)}</td><td class="mono">${s.time}</td>
             <td class="mono">${s.items.reduce((a,l)=>a+l.qty,0)}</td>
             <td><span class="badge badge-pay">${s.payment}</span></td>
+            ${s.customer?`<td style="color:var(--muted)">${s.customer}</td>`:`<td style="color:var(--muted)">—</td>`}
             <td class="mono">${N(s.total)}</td>
             ${adm?`<td class="mono" style="color:var(--muted)">${N(s.cost)}</td><td class="mono" style="color:var(--success)">${N(s.profit)}</td>`:""}
             <td style="color:var(--muted)">${s.staff}</td>
+            <td>${icon("chevron",12)}</td>
           </tr>`).join("")}
       </tbody></table></div>
     </div>
     <!-- Mobile cards -->
     <div class="data-cards">
       ${list.length===0?`<div style="color:var(--muted);text-align:center;padding:24px;font-size:13px">No sales match.</div>`:
-        list.map(s=>`<div class="data-card">
-          <div class="dc-row"><span class="dc-title mono">${s.receipt}</span><span class="badge badge-pay">${s.payment}</span></div>
-          <div class="dc-row"><span class="dc-meta">${fmt(s.date)} · ${s.time} · ${s.items.reduce((a,l)=>a+l.qty,0)} items</span></div>
+        list.map(s=>`<div class="data-card" style="cursor:pointer" onclick="S.modal={type:'receipt',sale:${JSON.stringify(s).replace(/`/g,"'")}};renderModal()">
+          <div class="dc-row"><span class="dc-title mono" style="color:var(--accent)">${s.receipt}</span><span class="badge badge-pay">${s.payment}</span></div>
+          <div class="dc-row"><span class="dc-meta">${fmt(s.date)} · ${s.time} · ${s.items.reduce((a,l)=>a+l.qty,0)} items${s.customer?' · '+s.customer:''}</span></div>
           <div class="dc-row" style="margin-top:6px"><span class="dc-label">Total</span><span class="mono" style="font-weight:700;font-size:15px">${N(s.total)}</span></div>
           ${adm?`<div class="dc-row"><span class="dc-label">Profit</span><span class="mono" style="color:var(--success)">${N(s.profit)}</span></div>`:""}
           <div class="dc-row"><span class="dc-label">Staff</span><span style="font-size:12px">${s.staff}</span></div>
+          <div class="dc-row" style="color:var(--accent);font-size:11.5px;margin-top:4px">Tap to view invoice ${icon("chevron",11)}</div>
         </div>`).join("")}
     </div>`;
 }
@@ -1226,59 +1297,127 @@ function renderCategory(){
 
 /* ─── Accounting ─── */
 function renderAccounting(){
-  const all=sumS(sales),ex=totExp(),net=all.profit-ex;
-  const gm=all.revenue?all.profit/all.revenue*100:0,nm=all.revenue?net/all.revenue*100:0;
+  const period = S.accPeriod||'all';
+  function filterByPeriod(list){
+    if(period==='today') return list.filter(s=>s.date===TODAY);
+    if(period==='week')  return list.filter(s=>s.date>=dStr(6));
+    if(period==='month') return list.filter(s=>s.date>=dStr(29));
+    return list;
+  }
+  const filtered=filterByPeriod(sales);
+  const all=sumS(filtered);
+  const filtEx=period==='all'?expenses:expenses.filter(e=>{
+    if(period==='today') return e.date===TODAY;
+    if(period==='week')  return e.date>=dStr(6);
+    if(period==='month') return e.date>=dStr(29);
+    return true;
+  });
+  const ex=(filtEx.length===expenses.length?totExp():filtEx.reduce((s,e)=>s+e.amount,0)),net=all.profit-ex;
+  const gm=all.revenue?all.profit/all.revenue*100:0;
+  const nm=all.revenue?net/all.revenue*100:0;
+  const days=Math.max(1,period==='today'?1:period==='week'?7:period==='month'?30:Math.max(1,sales.length>0?(new Date()-new Date(sales[0]?.date||TODAY))/(864e5)+1:1));
+  const avgDaily=all.revenue/days;
+
+  // Expense breakdown by category
+  const expCats={};
+  filtEx.forEach(e=>{expCats[e.category]=(expCats[e.category]||0)+e.amount;});
+  const expCatMax=Math.max(1,...Object.values(expCats));
+
+  // Best day
+  const dayMap={};
+  filtered.forEach(s=>{dayMap[s.date]=(dayMap[s.date]||0)+s.total;});
+  const bestDay=Object.entries(dayMap).sort((a,b)=>b[1]-a[1])[0];
+
+  const periods=[['today','Today'],['week','7 Days'],['month','30 Days'],['all','All time']];
+
   return`
-    <div class="kpi-grid">
-      <div class="stat-card"><div class="stat-label">Revenue</div><div class="stat-value" style="margin-top:6px;font-size:17px">${N(all.revenue)}</div></div>
-      <div class="stat-card"><div class="stat-label">COGS</div><div class="stat-value" style="margin-top:6px;font-size:17px">${N(all.cost)}</div></div>
-      <div class="stat-card"><div class="stat-label">Gross profit</div><div class="stat-value" style="margin-top:6px;font-size:17px;color:var(--success)">${N(all.profit)}</div><div class="stat-sub">${Pct(gm)}</div></div>
-      <div class="stat-card"><div class="stat-label">Net profit</div><div class="stat-value" style="margin-top:6px;font-size:17px;color:${net>=0?"var(--success)":"var(--danger)"}">${N(net)}</div><div class="stat-sub">${Pct(nm)}</div></div>
+    <!-- Period selector -->
+    <div style="display:flex;gap:7px;margin-bottom:16px;flex-wrap:wrap">
+      ${periods.map(([k,l])=>`<button class="chip ${(S.accPeriod||'all')===k?'active':''}" onclick="S.accPeriod='${k}';renderContent()">${l}</button>`).join('')}
     </div>
+
+    <!-- KPI row -->
+    <div class="kpi-grid" style="margin-bottom:16px">
+      <div class="stat-card"><div class="stat-label">Revenue</div><div class="stat-value" style="margin-top:6px;font-size:17px">${N(all.revenue)}</div><div class="stat-sub">${N(Math.round(avgDaily))}/day avg</div></div>
+      <div class="stat-card"><div class="stat-label">Cost of sales</div><div class="stat-value" style="margin-top:6px;font-size:17px">${N(all.cost)}</div><div class="stat-sub">${Pct(all.revenue?all.cost/all.revenue*100:0)} of revenue</div></div>
+      <div class="stat-card"><div class="stat-label">Gross profit</div><div class="stat-value" style="margin-top:6px;font-size:17px;color:var(--success)">${N(all.profit)}</div><div class="stat-sub">${Pct(gm)} margin</div></div>
+      <div class="stat-card"><div class="stat-label">Net profit</div><div class="stat-value" style="margin-top:6px;font-size:17px;color:${net>=0?"var(--success)":"var(--danger)"}">${N(net)}</div><div class="stat-sub">${Pct(nm)} margin</div></div>
+    </div>
+
     <div class="two-col">
+      <!-- P&L -->
       <div class="panel">
-        <div class="panel-head"><h3>P&amp;L Statement</h3><span style="font-size:10.5px;color:var(--muted)">All time</span></div>
+        <div class="panel-head"><h3>Profit &amp; Loss</h3><span style="font-size:10.5px;color:var(--muted)">${periods.find(p=>p[0]===(S.accPeriod||'all'))?.[1]||'All time'}</span></div>
         <div class="pl-block">
-          <div class="pl-row"><span>Revenue</span><span class="mono">${N(all.revenue)}</span></div>
-          <div class="pl-row"><span class="plabel" style="color:var(--muted);padding-left:14px">Less: COGS</span><span class="mono neg">(${N(all.cost)})</span></div>
-          <div class="pl-row total"><span>Gross profit</span><span class="mono">${N(all.profit)} <small style="font-weight:400;color:var(--muted)">(${Pct(gm)})</small></span></div>
-          <div class="pl-row" style="margin-top:6px"><span class="plabel" style="color:var(--muted);padding-left:14px">Less: Expenses</span><span class="mono neg">(${N(ex)})</span></div>
-          <div class="pl-row total"><span>Net profit</span><span class="mono" style="color:${net>=0?"var(--success)":"var(--danger)"}">${N(net)} <small style="font-weight:400;color:var(--muted)">(${Pct(nm)})</small></span></div>
+          <div class="pl-row"><span style="font-weight:600">Revenue</span><span class="mono" style="font-weight:600">${N(all.revenue)}</span></div>
+          <div class="pl-row"><span style="color:var(--muted);padding-left:12px">Cost of goods sold</span><span class="mono neg">(${N(all.cost)})</span></div>
+          <div class="pl-row" style="border-top:1px solid var(--line);padding-top:9px;margin-top:2px"><span style="font-weight:700">Gross profit</span><span class="mono" style="font-weight:700">${N(all.profit)} <small style="font-weight:400;color:var(--muted)">${Pct(gm)}</small></span></div>
+          <div style="height:10px"></div>
+          <div class="pl-row"><span style="color:var(--muted);padding-left:12px">Operating expenses</span><span class="mono neg">(${N(ex)})</span></div>
+          <div class="pl-row total"><span>Net profit</span><span class="mono" style="color:${net>=0?"var(--success)":"var(--danger)"}">${N(net)} <small style="font-weight:400;color:var(--muted)">${Pct(nm)}</small></span></div>
         </div>
       </div>
-      <div class="panel">
-        <div class="panel-head"><h3>Inventory valuation</h3></div>
-        <div class="pl-block">
-          <div class="pl-row"><span>Units on hand</span><span class="mono">${stockUnits()}</span></div>
-          <div class="pl-row"><span>At cost</span><span class="mono">${N(costVal())}</span></div>
-          <div class="pl-row"><span>At retail</span><span class="mono">${N(retailVal())}</span></div>
-          <div class="pl-row total"><span>Unrealised profit</span><span class="mono" style="color:var(--success)">${N(retailVal()-costVal())}</span></div>
+
+      <!-- Inventory + quick stats -->
+      <div>
+        <div class="panel" style="margin-bottom:12px">
+          <div class="panel-head"><h3>Inventory snapshot</h3></div>
+          <div class="pl-block" style="padding:13px 17px">
+            <div class="pl-row"><span>Units on hand</span><span class="mono">${stockUnits()}</span></div>
+            <div class="pl-row"><span>Stock at cost</span><span class="mono">${N(costVal())}</span></div>
+            <div class="pl-row"><span>Stock at retail</span><span class="mono">${N(retailVal())}</span></div>
+            <div class="pl-row total"><span>Unrealised profit</span><span class="mono" style="color:var(--success)">${N(retailVal()-costVal())}</span></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Quick stats</h3></div>
+          <div class="pl-block" style="padding:13px 17px">
+            <div class="pl-row"><span>Transactions</span><span class="mono">${filtered.length}</span></div>
+            <div class="pl-row"><span>Items sold</span><span class="mono">${all.items}</span></div>
+            <div class="pl-row"><span>Avg. sale value</span><span class="mono">${N(filtered.length?all.revenue/filtered.length:0)}</span></div>
+            ${bestDay?`<div class="pl-row"><span>Best day</span><span class="mono">${fmt(bestDay[0])} <small style="color:var(--muted)">${N(bestDay[1])}</small></span></div>`:''}
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- Expense breakdown -->
     <div class="panel">
-      <div class="panel-head"><h3>Operating expenses</h3>
+      <div class="panel-head">
+        <h3>Operating expenses</h3>
         <button class="btn btn-primary btn-sm" onclick="openModal('addExpense')">${icon("plus",12)} Add</button>
       </div>
+      ${Object.keys(expCats).length>0?`
+      <div style="padding:12px 17px;border-bottom:1px solid var(--line)">
+        ${Object.entries(expCats).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>`
+          <div class="bar-row" style="padding:7px 0">
+            <div class="bar-lbl" style="font-size:12px">${cat}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${(amt/expCatMax*100).toFixed(0)}%;background:var(--accent)"></div></div>
+            <div class="bar-val">${N(amt)}</div>
+          </div>`).join('')}
+        <div style="display:flex;justify-content:space-between;padding-top:9px;margin-top:4px;border-top:1px dashed var(--line);font-weight:700;font-size:13px">
+          <span>Total</span><span class="mono">${N(ex)}</span>
+        </div>
+      </div>`:''}
+      <!-- Expense list -->
       <div class="table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th></th></tr></thead><tbody>
-        ${expenses.length===0?`<tr class="empty-row"><td colspan="5">No expenses yet.</td></tr>`:
-          expenses.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(e=>`<tr>
-            <td class="mono">${fmt(e.date)}</td><td>${e.description}</td><td style="color:var(--muted)">${e.category}</td>
+        ${filtEx.length===0?`<tr class="empty-row"><td colspan="5">No expenses recorded.</td></tr>`:
+          filtEx.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(e=>`<tr>
+            <td class="mono">${fmt(e.date)}</td><td>${e.description}</td>
+            <td style="color:var(--muted)">${e.category}</td>
             <td class="mono">${N(e.amount)}</td>
             <td><span class="icon-btn" onclick="delExpense('${e.id}')">${icon("trash",12)}</span></td>
           </tr>`).join("")}
-        <tr><td colspan="3" style="text-align:right;font-weight:700;color:var(--muted)">Total</td><td class="mono" style="font-weight:700">${N(ex)}</td><td></td></tr>
       </tbody></table></div>
-      <!-- Mobile expense cards -->
       <div class="data-cards" style="padding:12px">
-        ${expenses.length===0?`<div style="color:var(--muted);text-align:center;padding:16px;font-size:13px">No expenses yet.</div>`:
-          expenses.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(e=>`<div class="data-card">
+        ${filtEx.length===0?`<div style="color:var(--muted);text-align:center;padding:16px;font-size:13px">No expenses recorded.</div>`:
+          filtEx.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(e=>`<div class="data-card">
             <div class="dc-row"><span class="dc-title">${e.description}</span><span class="mono" style="font-weight:700">${N(e.amount)}</span></div>
-            <div class="dc-row"><span class="dc-meta">${fmt(e.date)} · ${e.category}</span><button class="icon-btn" onclick="delExpense('${e.id}')">${icon("trash",12)}</button></div>
+            <div class="dc-row"><span class="dc-meta">${fmt(e.date)} · ${e.category}</span>
+              <button class="icon-btn" onclick="delExpense('${e.id}')">${icon("trash",12)}</button>
+            </div>
           </div>`).join("")}
-        <div style="padding:4px 0;border-top:1px solid var(--line);margin-top:8px;display:flex;justify-content:space-between;align-items:center">
-          <span style="font-weight:700;font-size:13px">Total expenses</span><span class="mono" style="font-weight:700">${N(ex)}</span>
-        </div>
+        ${filtEx.length>0?`<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line);font-weight:700;font-size:13px"><span>Total</span><span class="mono">${N(ex)}</span></div>`:''}
       </div>
     </div>`;
 }
@@ -1305,76 +1444,45 @@ function renderUsers(){
 function renderSettings(){
   const connected = DB_STATE==='live';
   const statusColor = {live:'var(--success)',error:'var(--danger)',loading:'var(--accent)',offline:'var(--muted)'}[DB_STATE]||'var(--muted)';
-  const statusText  = {live:'Connected & syncing',error:'Connection error — check URL',loading:'Connecting…',offline:'Not connected'}[DB_STATE]||'Not connected';
+  const statusText  = {live:'Connected · live sync',error:'Connection error',loading:'Connecting…',offline:'Not connected'}[DB_STATE]||'Not connected';
   return`
-    <!-- Connection panel -->
+    <!-- Database status — always visible, compact -->
     <div class="panel">
       <div class="panel-head">
-        <h3>${icon('wifi',12)} Google Sheets Connection</h3>
-        <span style="font-size:11px;font-weight:700;color:${statusColor};display:flex;align-items:center;gap:5px">${icon(connected?'check':'link',11)} ${statusText}</span>
+        <h3>${icon('wifi',12)} Database</h3>
+        <span style="font-size:11.5px;font-weight:700;color:${statusColor};display:flex;align-items:center;gap:5px">${icon(connected?'check':'link',11)} ${statusText}</span>
       </div>
-      <div style="padding:18px 19px">
-        <div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px">
-          Connect to your Google Sheet so data (products, sales, expenses) is saved permanently and accessible across devices.
+      <div style="padding:14px 19px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="pl-row" style="padding:5px 0;font-size:13px"><span>Products</span><span class="mono" style="margin-left:20px">${products.length}</span></div>
+          <div class="pl-row" style="padding:5px 0;font-size:13px"><span>Sales recorded</span><span class="mono" style="margin-left:20px">${sales.length}</span></div>
+          <div class="pl-row" style="padding:5px 0;font-size:13px"><span>Expenses</span><span class="mono" style="margin-left:20px">${expenses.length}</span></div>
         </div>
-        <div class="field">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="reloadFromSheets()">${icon('refresh',12)} Reload from Database</button>
+          <button class="btn btn-ghost btn-sm" onclick="S.showConnectionForm=!S.showConnectionForm;renderContent()">${icon('settings',12)} ${S.showConnectionForm?'Hide':'Manage connection'}</button>
+        </div>
+      </div>
+      ${S.showConnectionForm?`
+      <div style="padding:0 19px 18px;border-top:1px solid var(--line)">
+        <div class="field" style="margin-top:14px">
           <label>Apps Script Web App URL</label>
           <input id="gas-url-input" value="${GAS_URL}" placeholder="https://script.google.com/macros/s/…/exec" style="font-size:12px"/>
         </div>
         <div style="display:flex;gap:9px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="saveGasUrl()">${icon('check',13)} Save & connect</button>
-          ${GAS_URL?`<button class="btn btn-ghost" onclick="testConnection()">${icon('wifi',13)} Test connection</button>`:''}
-          ${GAS_URL?`<button class="btn btn-ghost" style="color:var(--danger)" onclick="disconnectSheets()">${icon('x',12)} Disconnect</button>`:''}
+          <button class="btn btn-primary btn-sm" onclick="saveGasUrl()">${icon('check',12)} Save & connect</button>
+          ${GAS_URL?`<button class="btn btn-ghost btn-sm" onclick="testConnection()">${icon('wifi',12)} Test</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="disconnectSheets()">${icon('x',11)} Disconnect</button>`:''}
         </div>
-        ${GAS_URL&&DB_STATE!=='live'?`<div style="margin-top:12px;padding:11px 14px;background:var(--danger-bg);border-radius:var(--r-sm);font-size:12.5px;color:var(--danger);line-height:1.6">
-          Could not reach the Apps Script. Check the URL is correct and the deployment is set to <b>"Anyone"</b> access.
+        ${GAS_URL&&DB_STATE!=='live'?`<div style="margin-top:12px;padding:11px 14px;background:var(--danger-bg);border-radius:var(--r-sm);font-size:12px;color:var(--danger)">
+          Could not reach the database. Check the URL and ensure deployment is set to <b>"Anyone"</b> access.
         </div>`:''}
-      </div>
+      </div>`:''}
     </div>
 
-    <!-- Setup guide -->
+    <!-- Role switch -->
     <div class="panel">
-      <div class="panel-head"><h3>${icon('box',12)} Setup guide — 3 minutes</h3></div>
-      <div style="padding:18px 19px">
-        ${[
-          ['1','Open your Google Sheet (the one with Products, sales, saleItems, Users tabs).'],
-          ['2','Click <b>Extensions &gt; Apps Script</b> in the top menu.'],
-          ['3','Delete any existing code in the editor. Paste the entire <code>8fifteen-apps-script.js</code> file contents.'],
-          ['4','Click <b>Deploy &gt; New deployment</b>.'],
-          ['5','Set type: <b>Web app</b>. Execute as: <b>Me</b>. Who has access: <b>Anyone</b>. Click Deploy.'],
-          ['6','Click <b>Authorise access</b> → choose your Google account → Allow.'],
-          ['7','Copy the <b>Web app URL</b> (starts with https://script.google.com/macros/s/…)'],
-          ['8','Paste it in the field above and click <b>Save &amp; connect</b>.'],
-        ].map(([n,t])=>`
-          <div style="display:flex;gap:13px;padding:10px 0;border-bottom:1px solid var(--line)">
-            <span style="width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${n}</span>
-            <span style="font-size:13px;line-height:1.6;padding-top:2px">${t}</span>
-          </div>`).join("")}
-        <div style="margin-top:14px;padding:12px 14px;background:var(--accent-bg);border-radius:var(--r-sm);font-size:12.5px;color:var(--warn);line-height:1.6">
-          <b>Tip:</b> After any code change in Apps Script, go to <b>Deploy &gt; Manage deployments &gt; Edit ✏️ &gt; New version &gt; Deploy</b> to update the live endpoint.
-        </div>
-      </div>
-    </div>
-
-    <!-- Data sync panel -->
-    ${GAS_URL&&DB_STATE==='live'?`
-    <div class="panel">
-      <div class="panel-head"><h3>${icon('trend',12)} Data sync</h3></div>
-      <div style="padding:18px 19px">
-        <div class="pl-row"><span>Products in sheet</span><span class="mono">${products.length}</span></div>
-        <div class="pl-row"><span>Sales recorded</span><span class="mono">${sales.length}</span></div>
-        <div class="pl-row"><span>Expenses logged</span><span class="mono">${expenses.length}</span></div>
-        <div class="pl-row"><span>Team members</span><span class="mono">${users.length}</span></div>
-        <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
-          <button class="btn btn-ghost" onclick="reloadFromSheets()">${icon('refresh',12)} Reload from sheet</button>
-          
-        </div>
-      </div>
-    </div>`:''}
-
-    <!-- Role switch (mobile) -->
-    <div class="panel">
-      <div class="panel-head"><h3>${icon('users',12)} Active role</h3></div>
+      <div class="panel-head"><h3>${icon('users',12)} Account</h3></div>
       <div style="padding:15px 19px;display:flex;gap:9px">
         <button class="btn ${S.role==='admin'?'btn-primary':'btn-ghost'}" onclick="setRole('admin');go('dashboard')" style="flex:1;justify-content:center">Admin</button>
         <button class="btn ${S.role==='staff'?'btn-primary':'btn-ghost'}" onclick="setRole('staff');go('dashboard')" style="flex:1;justify-content:center">Staff</button>
@@ -1389,6 +1497,7 @@ function renderSettings(){
       </div>`:''}
     </div>
 
+    <!-- Change password -->
     <div class="panel">
       <div class="panel-head"><h3>${icon('settings',12)} Change password</h3></div>
       <div style="padding:17px 19px">
@@ -1397,7 +1506,6 @@ function renderSettings(){
         <div class="field"><label>Confirm new password</label><input id="cp-confirm" type="password" placeholder="Confirm new password"/></div>
         <div id="cp-msg" style="font-size:12.5px;margin-bottom:10px;min-height:16px"></div>
         <button class="btn btn-primary btn-sm" onclick="changePassword()">${icon("check",12)} Update password</button>
-        <div style="font-size:11px;color:var(--muted);margin-top:10px">Note: password changes are stored in memory and reset when the page is refreshed. A permanent password change requires updating the server credentials.</div>
       </div>
     </div>`;
 }
@@ -1569,33 +1677,56 @@ function renderReports(){
     </div>`;
 }
 
-/* ─── Searchable product picker ─── */
+/* ─── Searchable product picker (surgical DOM — no full re-render on type) ─── */
 function openPicker(rowId){
-  S.saleRows.forEach(r=>r.open=r.rowId===rowId);
-  renderContent();
-  // focus the input
-  setTimeout(()=>{const el=document.getElementById("pk_"+rowId);if(el&&el.focus)el.focus();},40);
+  S.saleRows.forEach(r=>{ if(r.rowId!==rowId) r.open=false; });
+  const row=S.saleRows.find(r=>r.rowId===rowId);
+  if(row){ row.open=true; _refreshPickerDrop(rowId); }
 }
 function closePicker(rowId){
   setTimeout(()=>{
     const row=S.saleRows.find(r=>r.rowId===rowId);
-    if(row){row.open=false; renderContent();}
+    if(row){ row.open=false; const el=document.getElementById('pkd_'+rowId); if(el){ el.innerHTML=''; el.style.display='none'; } }
   },180);
 }
 function setPickerSearch(rowId,txt){
   const row=S.saleRows.find(r=>r.rowId===rowId);
-  if(row){row.search=txt; renderContent();}
+  if(!row) return;
+  row.search=txt; row.open=true;
+  _refreshPickerDrop(rowId);
+}
+function _refreshPickerDrop(rowId){
+  const row=S.saleRows.find(r=>r.rowId===rowId);
+  const el=document.getElementById('pkd_'+rowId);
+  if(!el||!row) return;
+  if(!row.open){ el.style.display='none'; return; }
+  const srch=(row.search||'').toLowerCase();
+  const filtered=products.filter(px=>px.stock>0&&(
+    px.name.toLowerCase().includes(srch)||
+    px.sku.toLowerCase().includes(srch)||
+    px.category.toLowerCase().includes(srch)||
+    (px.subcategory||'').toLowerCase().includes(srch)
+  )).slice(0,10);
+  el.style.display='block';
+  if(!filtered.length){
+    el.innerHTML=`<div style="padding:13px;text-align:center;color:var(--muted);font-size:12.5px">${srch?`No results for "${row.search}"`:'No products in stock'}</div>`;
+    return;
+  }
+  el.innerHTML=filtered.map(px=>`<div class="picker-item" onmousedown="selectFromPicker('${rowId}','${px.id}')">
+    <div class="pi-name">${px.name}${px.subcategory?` <span style="font-size:10px;color:var(--muted)">· ${px.subcategory}</span>`:''}</div>
+    <div class="pi-meta">${px.category} · <span class="pi-price">${N(px.price)}</span> · ${px.stock} left</div>
+  </div>`).join('');
 }
 function selectFromPicker(rowId,productId){
   const row=S.saleRows.find(r=>r.rowId===rowId);
-  if(row){row.productId=productId;row.qty=row.qty||1;row.search="";row.open=false;}
-  renderContent();
+  if(row){row.productId=productId;row.qty=row.qty||1;row.search='';row.open=false;}
+  renderContent(); // OK here — user made a selection, full update needed
 }
 function clearPickerSelection(rowId){
   const row=S.saleRows.find(r=>r.rowId===rowId);
-  if(row){row.productId="";row.search="";row.open=true;}
+  if(row){row.productId='';row.search='';row.open=true;}
   renderContent();
-  setTimeout(()=>{const el=document.getElementById("pk_"+rowId);if(el&&el.focus)el.focus();},40);
+  setTimeout(()=>{const el=document.getElementById('pk_'+rowId);if(el&&el.focus)el.focus();},40);
 }
 
 /* ─── Receipt ─── */
@@ -1618,6 +1749,7 @@ function renderReceiptSheet(sale){
         <div><span style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Time</span><b>${sale.time}</b></div>
         <div><span style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Payment</span><b>${sale.payment}</b></div>
         <div style="grid-column:1/-1"><span style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Served by</span><b>${sale.staff}</b></div>
+        ${sale.customer?`<div style="grid-column:1/-1"><span style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Customer</span><b>${sale.customer}</b></div>`:''}
       </div>
       <table class="receipt-items">
         <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
@@ -1751,6 +1883,7 @@ function renderModal(){
   else if(S.modal.type==="addUser")body=userForm();
   else if(S.modal.type==="moreNav")body=moreNavSheet();
   else if(S.modal.type==="receipt")body=renderReceiptSheet(S.modal.sale);
+  else if(S.modal.type==="manageCategories")body=manageCategoriesModal();
   else if(S.modal.type==="demoSheet"){
     if(!S.loggedIn){ renderDemoSheet(); return; }
     body=moreNavSheet();
@@ -1772,13 +1905,31 @@ function moreNavSheet(){
 }
 function productForm(p){
   const e=!!p;
+  const selCat = e?p.category:CATS[0]||'';
+  const catData = CATS_DATA.find(c=>c.name===selCat);
+  const subs = catData?catData.subs:[];
   return`<div class="sheet-handle"></div>
     <div class="sheet-head"><h3>${e?"Edit product":"Add product"}</h3><button class="icon-btn" onclick="closeModal()">${icon("x",13)}</button></div>
     <div class="sheet-body">
-      <div class="field"><label>Product name</label><input id="f-name" value="${e?p.name:""}" placeholder="e.g. Shea Glow Body Butter"/></div>
+      <div class="field"><label>Product name</label><input id="f-name" value="${e?p.name:""}" placeholder="e.g. Hibiscus Tea 50g"/></div>
       <div class="field-row">
-        <div class="field"><label>SKU</label><input id="f-sku" value="${e?p.sku:""}" placeholder="BTY-005"/></div>
-        <div class="field"><label>Category</label><select id="f-cat">${CATS.map(c=>`<option ${e&&p.category===c?"selected":""}>${c}</option>`).join("")}</select></div>
+        <div class="field"><label>SKU</label><input id="f-sku" value="${e?p.sku:""}" placeholder="TEA-001"/></div>
+        <div class="field">
+          <label>Category</label>
+          <select id="f-cat" onchange="refreshSubcatOptions(this.value,'${e?p.subcategory||'':''}')">
+            ${CATS.map(c=>`<option value="${c}" ${e&&p.category===c?"selected":""}>${c}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Sub-category <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <div style="display:flex;gap:8px">
+          <select id="f-subcat" style="flex:1">
+            <option value="">None</option>
+            ${subs.map(s=>`<option value="${s}" ${e&&p.subcategory===s?"selected":""}>${s}</option>`).join("")}
+          </select>
+          <input id="f-subcat-new" placeholder="Or type new sub-category" style="flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--ink);font-size:13px"/>
+        </div>
       </div>
       <div class="field-row">
         <div class="field"><label>Cost price (₦)</label><input id="f-cost" type="number" inputmode="numeric" min="0" value="${e?p.cost:""}" oninput="previewMargin()" placeholder="0"/></div>
@@ -1791,8 +1942,9 @@ function productForm(p){
       </div>
     </div>
     <div class="sheet-foot">
+      <button class="btn btn-ghost btn-sm" onclick="openModal('manageCategories')" style="margin-right:auto">${icon("layers",12)} Categories</button>
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="${e?`saveEditProd('${p.id}')`:"saveAddProd()"}">${icon("check",13)} ${e?"Save":"Add product"}</button>
+      <button class="btn btn-primary" onclick="${e?`saveEditProd('${p.id}')`:"saveAddProd()"}">${icon("check",13)} ${e?"Save":"Add"}</button>
     </div>`;
 }
 function restockForm(p){
@@ -1841,6 +1993,68 @@ function userForm(){
       <button class="btn btn-primary" onclick="saveUser()">${icon("check",13)} Send</button>
     </div>`;
 }
+function refreshSubcatOptions(catName, selectedSub){
+  const catData = CATS_DATA.find(c=>c.name===catName);
+  const subs = catData?catData.subs:[];
+  const sel = document.getElementById('f-subcat');
+  if(!sel) return;
+  sel.innerHTML = `<option value="">None</option>${subs.map(s=>`<option value="${s}" ${s===selectedSub?"selected":""}>${s}</option>`).join('')}`;
+}
+function manageCategoriesModal(){
+  return`<div class="sheet-handle"></div>
+    <div class="sheet-head"><h3>Manage categories</h3><button class="icon-btn" onclick="closeModal()">${icon("x",13)}</button></div>
+    <div class="sheet-body">
+      ${CATS_DATA.map((cat,ci)=>`
+        <div style="margin-bottom:14px;padding:13px;background:var(--surface);border-radius:var(--r-sm);border:1px solid var(--line)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-weight:700;font-size:13.5px">${cat.name}</span>
+            <span class="icon-btn" onclick="deleteCat(${ci})" title="Delete category">${icon("trash",11)}</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Sub-categories:</div>
+          ${cat.subs.length===0?`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">None added yet</div>`:`
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+            ${cat.subs.map((s,si)=>`<span style="display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px">
+              ${s} <button style="background:none;border:none;cursor:pointer;color:var(--muted);padding:0;display:flex" onclick="deleteSub(${ci},${si})">${icon("x",9)}</button>
+            </span>`).join("")}
+          </div>`}
+          <div style="display:flex;gap:7px">
+            <input id="newsub_${ci}" placeholder="Add sub-category…" style="flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);color:var(--ink);font-size:12.5px"/>
+            <button class="btn btn-ghost btn-sm" onclick="addSubCat(${ci})">${icon("plus",11)}</button>
+          </div>
+        </div>`).join("")}
+      <div style="border-top:1px solid var(--line);padding-top:14px;margin-top:4px">
+        <div style="font-weight:600;font-size:13px;margin-bottom:9px">Add new category</div>
+        <div style="display:flex;gap:8px">
+          <input id="newcat-name" placeholder="Category name" style="flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);color:var(--ink);font-size:13px"/>
+          <button class="btn btn-primary btn-sm" onclick="addCat()">${icon("plus",12)} Add</button>
+        </div>
+      </div>
+    </div>
+    <div class="sheet-foot"><button class="btn btn-primary" onclick="closeModal()">${icon("check",13)} Done</button></div>`;
+}
+function addCat(){
+  const name=(document.getElementById('newcat-name')?.value||'').trim();
+  if(!name){alert('Enter a category name.');return;}
+  if(CATS_DATA.find(c=>c.name.toLowerCase()===name.toLowerCase())){alert('Category already exists.');return;}
+  const colors=['#9C7A3C','#6B7355','#8C5A46','#5B6B73','#6B5B73','#4E7373','#735B4E','#4E6173'];
+  CATS_DATA.push({name,color:colors[CATS_DATA.length%colors.length],subs:[]});
+  syncCats();
+  openModal('manageCategories');
+}
+function deleteCat(ci){
+  if(!confirm(`Delete "${CATS_DATA[ci].name}"? Products in this category will keep the name.`))return;
+  CATS_DATA.splice(ci,1); syncCats(); openModal('manageCategories');
+}
+function addSubCat(ci){
+  const el=document.getElementById('newsub_'+ci);
+  const name=(el?.value||'').trim();
+  if(!name){alert('Enter a sub-category name.');return;}
+  if(CATS_DATA[ci].subs.includes(name)){alert('Sub-category already exists.');return;}
+  CATS_DATA[ci].subs.push(name);
+  openModal('manageCategories');
+}
+function deleteSub(ci,si){ CATS_DATA[ci].subs.splice(si,1); openModal('manageCategories'); }
+
 function previewMargin(){
   const cost=parseFloat(document.getElementById("f-cost").value)||0;
   const price=parseFloat(document.getElementById("f-price").value)||0;
@@ -1902,22 +2116,35 @@ function completeSale(){
   const time=new Date().toTimeString().slice(0,5),rc="8FW-"+(rcCounter++);
   const staffName=S.currentUser?S.currentUser.name:"Staff";
   const saleRecord={id:uid("s"),receipt:rc,date:TODAY,time,items,payment:S.payment,
-    staff:staffName,total,cost,profit:total-cost,discount:S.discount||0};
+    staff:staffName,customer:S.customerName||'',total,cost,profit:total-cost,discount:S.discount||0};
   sales.push(saleRecord);
   products=products.map(p=>{const q=agg[p.id];return q?{...p,stock:p.stock-q}:p;});
   sheetPost('addSale',{...saleRecord,items:items.map(i=>({...i,id:uid('si'),saleId:saleRecord.id}))});
   Object.entries(agg).forEach(([pid,q])=>{const p=products.find(x=>x.id===pid);if(p)sheetPost('updateStock',{id:pid,stock:p.stock});});
   S.saleRows=[{rowId:uid("row"),productId:"",qty:1,search:"",open:false}];
-  S.discount=0;
+  S.discount=0; S.customerName='';
   S.modal={type:"receipt",sale:saleRecord};
   renderContent();renderModal();
 }
 
+function _getSubcat(){
+  const sel=(document.getElementById('f-subcat')?.value||'').trim();
+  const nw=(document.getElementById('f-subcat-new')?.value||'').trim();
+  const sub = nw||sel||'';
+  // If typed a new sub, auto-add it to the category
+  if(nw){
+    const catName=document.getElementById('f-cat')?.value||'';
+    const catD=CATS_DATA.find(c=>c.name===catName);
+    if(catD&&!catD.subs.includes(nw)) catD.subs.push(nw);
+  }
+  return sub;
+}
 function saveAddProd(){
   const name=document.getElementById("f-name").value.trim();
   if(!name){alert("Name required.");return;}
   const sku=document.getElementById("f-sku").value.trim()||("GEN-"+Math.floor(Math.random()*900+100));
-  const p={id:uid("p"),sku,name,category:document.getElementById("f-cat").value,
+  const subcategory=_getSubcat();
+  const p={id:uid("p"),sku,name,category:document.getElementById("f-cat").value,subcategory,
     cost:parseFloat(document.getElementById("f-cost").value)||0,
     price:parseFloat(document.getElementById("f-price").value)||0,
     stock:parseInt(document.getElementById("f-stock").value)||0,
@@ -1929,8 +2156,9 @@ function saveAddProd(){
 function saveEditProd(id){
   const idx=products.findIndex(p=>p.id===id);if(idx<0)return;
   const name=document.getElementById("f-name").value.trim();
+  const subcategory=_getSubcat();
   const updated={...products[idx],name,sku:document.getElementById("f-sku").value.trim(),
-    category:document.getElementById("f-cat").value,
+    category:document.getElementById("f-cat").value,subcategory,
     cost:parseFloat(document.getElementById("f-cost").value)||0,
     price:parseFloat(document.getElementById("f-price").value)||0,
     stock:parseInt(document.getElementById("f-stock").value)||0,
