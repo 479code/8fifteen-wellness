@@ -472,6 +472,12 @@ body.dark .margin-preview b{color:var(--accent);}
   #print-area{display:block!important;}
 }
 #print-area{display:none;}
+/* Sales item cards */
+.sale-item-card{transition:box-shadow .15s;}
+.sale-item-card:focus-within{box-shadow:0 0 0 2px var(--accent) !important;}
+/* Ensure picker dropdown sits above other cards */
+.picker-wrap{position:relative;z-index:10;}
+.picker-dropdown{z-index:50;}
 
 /* ─── Searchable product picker ─── */
 .picker-wrap{position:relative;width:100%;}
@@ -679,13 +685,17 @@ const TITLE={dashboard:"Today's overview",inventory:"Inventory",sales:"Sales ent
 const CREDS = [
   {email:"admin@8fifteenwellness.com", password:"ChangeMe123!", role:"Admin", name:"Uthman Muhammad"},
 ];
+const STAFF_PASSWORDS = {}; // email → password (defaults to "staff123" if not set)
+
 function tryLogin(email, pw){
-  // Also check against Users list for staff (password is staff123 by default, or set via change password)
-  const cred = CREDS.find(c=>c.email.toLowerCase()===email.toLowerCase().trim() && c.password===pw);
+  const e = email.toLowerCase().trim();
+  const cred = CREDS.find(c=>c.email.toLowerCase()===e && c.password===pw);
   if(cred) return {name:cred.name, email:cred.email, role:cred.role};
-  // Check dynamic users list (staff added via Users panel use password "staff123" until changed)
-  const u = users.find(u=>u.email.toLowerCase()===email.toLowerCase().trim() && u.role==="Staff");
-  if(u && pw==="staff123") return {name:u.name, email:u.email, role:u.role};
+  const u = users.find(u=>u.email.toLowerCase()===e && u.role==="Staff");
+  if(u){
+    const expected = STAFF_PASSWORDS[u.email.toLowerCase()] || "staff123";
+    if(pw===expected) return {name:u.name, email:u.email, role:u.role};
+  }
   return null;
 }
 function doLogin(user){
@@ -700,12 +710,20 @@ function changePassword(){
   const conf = (document.getElementById("cp-confirm").value||"").trim();
   const msgEl = document.getElementById("cp-msg");
   if(!cur||!nw||!conf){ if(msgEl) msgEl.innerHTML=`<span style="color:var(--danger)">All fields are required.</span>`; return; }
-  const cred = CREDS.find(c=>c.email===S.currentUser?.email);
-  if(!cred||cred.password!==cur){ if(msgEl) msgEl.innerHTML=`<span style="color:var(--danger)">Current password is incorrect.</span>`; return; }
-  if(nw.length<8){ if(msgEl) msgEl.innerHTML=`<span style="color:var(--danger)">New password must be at least 8 characters.</span>`; return; }
+  if(nw.length<6){ if(msgEl) msgEl.innerHTML=`<span style="color:var(--danger)">New password must be at least 6 characters.</span>`; return; }
   if(nw!==conf){ if(msgEl) msgEl.innerHTML=`<span style="color:var(--danger)">New passwords do not match.</span>`; return; }
-  cred.password=nw;
-  if(msgEl) msgEl.innerHTML=`<span style="color:var(--success)">Password updated successfully.</span>`;
+  // Verify current password
+  const userEmail = S.currentUser?.email?.toLowerCase()||"";
+  const isAdmin = CREDS.find(c=>c.email.toLowerCase()===userEmail);
+  if(isAdmin){
+    if(isAdmin.password!==cur){ if(msgEl) msgEl.innerHTML=`<span style="color:var(--danger)">Current password is incorrect.</span>`; return; }
+    isAdmin.password=nw;
+  } else {
+    const expected = STAFF_PASSWORDS[userEmail]||"staff123";
+    if(expected!==cur){ if(msgEl) msgEl.innerHTML=`<span style="color:var(--danger)">Current password is incorrect.</span>`; return; }
+    STAFF_PASSWORDS[userEmail]=nw;
+  }
+  if(msgEl) msgEl.innerHTML=`<span style="color:var(--success)">✓ Password updated successfully.</span>`;
   document.getElementById("cp-current").value="";
   document.getElementById("cp-new").value="";
   document.getElementById("cp-confirm").value="";
@@ -1100,31 +1118,34 @@ function validRows(){return S.saleRows.filter(r=>r.productId);}
 function renderSales(){
   const rows=S.saleRows;
   let sub=0;
-
-  function buildRow(r,idx){
+  // compute subtotal (no DOM side-effects)
+  rows.forEach(r=>{
     const p=products.find(x=>x.id===r.productId);
-    const up=p?p.price:0,qty=p?r.qty:0,lt=up*qty;
-    if(p){sub+=lt;}
-    const picker = r.productId&&!r.open
-      ?`<div class="picker-selected">
-          <span class="ps-name">${p.name}${p&&p.subcategory?` <small style="color:var(--muted)">· ${p.subcategory}</small>`:''}</span>
-          <span class="ps-price mono">${N(up)}</span>
-          <button class="ps-clear" onclick="clearPickerSelection('${r.rowId}')">${icon("x",9)}</button>
-        </div>`
-      :`<div class="picker-wrap">
-          <input id="pk_${r.rowId}" class="picker-input" placeholder="Search product by name or SKU…"
-            value="${r.search||""}"
-            oninput="setPickerSearch('${r.rowId}',this.value)"
-            onfocus="openPicker('${r.rowId}')"
-            onblur="closePicker('${r.rowId}')"/>
-          <div id="pkd_${r.rowId}" class="picker-dropdown" style="display:none"></div>
-        </div>`;
-    return{picker,p,up,lt,qty};
-  }
-
-  const builtRows=rows.map((r,i)=>({r,i,...buildRow(r,i)}));
+    if(p) sub+=p.price*(r.qty||1);
+  });
   const discountAmt=S.discount>0?Math.round(sub*S.discount/100):0;
   const grandTotal=Math.max(0,sub-discountAmt);
+
+  function pickerFor(r){
+    const p=products.find(x=>x.id===r.productId);
+    const up=p?p.price:0,lt=up*(r.qty||1);
+    if(r.productId&&!r.open)
+      return`<div class="picker-selected">
+        <span class="ps-name">${p.name}${p.subcategory?` <small style="color:var(--muted)">· ${p.subcategory}</small>`:''}</span>
+        <span class="ps-price mono">${N(up)}</span>
+        <button class="ps-clear" onmousedown="clearPickerSelection('${r.rowId}')">${icon("x",9)}</button>
+      </div>`;
+    return`<div class="picker-wrap">
+      <input id="pk_${r.rowId}" class="picker-input"
+        placeholder="Search product by name or SKU…"
+        value="${r.search||''}"
+        autocomplete="off" autocorrect="off" spellcheck="false"
+        oninput="setPickerSearch('${r.rowId}',this.value)"
+        onfocus="openPicker('${r.rowId}')"
+        onblur="closePicker('${r.rowId}')"/>
+      <div id="pkd_${r.rowId}" class="picker-dropdown" style="display:none"></div>
+    </div>`;
+  }
 
   return`
     <div class="panel">
@@ -1136,20 +1157,19 @@ function renderSales(){
         </div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
           <div>
-            <div class="s-label">Customer name <span style="color:var(--muted);font-weight:400">(optional)</span></div>
-            <input type="text" placeholder="e.g. Mrs Adeyemi"
+            <div class="s-label">Customer <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
+            <input type="text" placeholder="Customer name"
               value="${S.customerName||''}"
               oninput="S.customerName=this.value"
-              style="padding:8px 11px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);color:var(--ink);font-size:13px;width:180px"/>
+              style="padding:8px 11px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);color:var(--ink);font-size:14px;width:170px"/>
           </div>
           <div>
             <div class="s-label">Discount %</div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <input type="number" inputmode="numeric" min="0" max="100" value="${S.discount||0}"
-                oninput="S.discount=Math.min(100,Math.max(0,parseFloat(this.value)||0));renderContent()"
-                style="width:64px;padding:7px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);color:var(--ink);font-size:13px;text-align:center"/>
-              ${discountAmt>0?`<span style="font-size:12px;color:var(--success)">−${N(discountAmt)}</span>`:""}
-            </div>
+            <input type="number" inputmode="numeric" min="0" max="100"
+              value="${S.discount||0}"
+              oninput="S.discount=Math.min(100,Math.max(0,parseFloat(this.value)||0));_refreshSaleTotals()"
+              id="sale-discount-input"
+              style="width:70px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);color:var(--ink);font-size:14px;text-align:center"/>
           </div>
           <div>
             <div class="s-label">Served by</div>
@@ -1159,50 +1179,82 @@ function renderSales(){
         </div>
       </div>
 
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th style="min-width:260px">Product</th><th>Qty</th><th>Unit price</th><th>Line total</th><th></th></tr></thead>
-          <tbody>
-            ${builtRows.map(({r,p,up,lt,picker})=>`<tr class="sale-row">
-              <td style="position:relative">${picker}</td>
-              <td><input class="row-qty" type="number" inputmode="numeric" min="1" max="${p?p.stock:999}" value="${r.qty}" ${!p?"disabled":""} oninput="setRQ('${r.rowId}',this.value)"/></td>
-              <td class="mono">${p?N(up):"—"}</td>
-              <td class="mono" style="font-weight:600">${p?N(lt):"—"}</td>
-              <td><span class="icon-btn" onclick="removeRow('${r.rowId}')">${icon("x",11)}</span></td>
-            </tr>`).join("")}
-          </tbody>
-        </table>
-      </div>
-      <div style="padding:8px 17px">
-        <button class="btn btn-ghost btn-sm" onclick="addRow()">${icon("plus",12)} Add item</button>
-      </div>
-
-      <div class="data-cards" style="padding:10px 14px">
-        ${builtRows.map(({r,p,up,lt,picker,i})=>`<div class="data-card sale-row" style="position:relative;animation-delay:${i*.05}s">
-          <div class="s-label" style="margin-bottom:8px">Item ${i+1}</div>
-          <div style="margin-bottom:10px;position:relative">${picker}</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:11px;color:var(--muted)">Qty:</span>
-              <input class="row-qty" type="number" inputmode="numeric" min="1" max="${p?p.stock:999}" value="${r.qty}" ${!p?"disabled":""} oninput="setRQ('${r.rowId}',this.value)" style="width:64px"/>
+      <!-- SINGLE unified row layout — works on desktop and mobile -->
+      <div id="sale-rows-container" style="padding:8px 14px">
+        ${rows.map((r,i)=>{
+          const p=products.find(x=>x.id===r.productId);
+          const lt=p?p.price*(r.qty||1):0;
+          return`<div class="sale-item-card" data-rowid="${r.rowId}" style="background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:13px;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <span style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700">Item ${i+1}</span>
+              <button class="icon-btn" onmousedown="removeRow('${r.rowId}')" style="width:28px;height:28px">${icon("x",11)}</button>
             </div>
-            <div style="text-align:right">${p?`<div class="mono" style="font-size:13px;font-weight:700">${N(lt)}</div><div class="dc-meta">${N(up)} × ${r.qty}</div>`:""}</div>
-            <button class="icon-btn" onclick="removeRow('${r.rowId}')" style="flex-shrink:0">${icon("x",11)}</button>
-          </div>
-        </div>`).join("")}
-        <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:4px" onclick="addRow()">${icon("plus",13)} Add item</button>
+            <div style="margin-bottom:10px">${pickerFor(r)}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:11.5px;color:var(--muted)">Qty</span>
+                <input type="number" inputmode="numeric" min="1" max="${p?p.stock:999}"
+                  value="${r.qty||1}" ${!p?"disabled":""}
+                  oninput="setRQ('${r.rowId}',this.value)"
+                  style="width:72px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);color:var(--ink);font-size:15px;text-align:center"/>
+              </div>
+              <div id="rp_${r.rowId}" style="text-align:right">
+                ${p?`<div style="font-size:11px;color:var(--muted)">${N(p.price)} × ${r.qty||1}</div>
+                     <div class="mono" style="font-size:15px;font-weight:700">${N(lt)}</div>`
+                  :`<div style="color:var(--muted);font-size:12px">—</div>`}
+              </div>
+            </div>
+          </div>`;
+        }).join("")}
+        <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:2px" onclick="addRow()">${icon("plus",13)} Add item</button>
       </div>
 
       <div class="sale-foot">
-        <div class="sale-total-area">
-          <div class="pl-row"><span>Subtotal</span><span class="mono">${N(sub)}</span></div>
-          ${discountAmt>0?`<div class="pl-row"><span style="color:var(--success)">Discount (${S.discount}%)</span><span class="mono neg">−${N(discountAmt)}</span></div>`:""}
-          <div class="pl-row total"><span>Total due</span><span class="mono" style="font-family:'Bodoni Moda',serif;font-size:20px">${N(grandTotal)}</span></div>
+        <div class="sale-total-area" id="sale-totals-area">
+          <div class="pl-row"><span>Subtotal</span><span class="mono" id="sale-subtotal">${N(sub)}</span></div>
+          <div class="pl-row" id="sale-discount-row" style="${discountAmt>0?'':'display:none'}">
+            <span style="color:var(--success)">Discount (${S.discount}%)</span>
+            <span class="mono" id="sale-discount-amt" style="color:var(--success)">−${N(discountAmt)}</span>
+          </div>
+          <div class="pl-row total">
+            <span>Total due</span>
+            <span class="mono" id="sale-total" style="font-family:'Bodoni Moda',serif;font-size:20px">${N(grandTotal)}</span>
+          </div>
         </div>
-        <button class="btn btn-primary" ${validRows().length===0?"disabled":""} onclick="completeSale()" style="min-width:140px;justify-content:center;padding:13px 18px">${icon("check",14)} Record sale</button>
+        <button id="sale-submit-btn" class="btn btn-primary"
+          ${validRows().length===0?"disabled":""}
+          onclick="completeSale()"
+          style="min-width:140px;justify-content:center;padding:13px 18px">
+          ${icon("check",14)} Record sale
+        </button>
       </div>
     </div>`;
 }
+
+/* surgical updates — no full re-render needed */
+function _refreshSaleTotals(){
+  let sub=0;
+  S.saleRows.forEach(r=>{const p=products.find(x=>x.id===r.productId);if(p)sub+=p.price*(r.qty||1);});
+  const disc=S.discount>0?Math.round(sub*S.discount/100):0;
+  const total=Math.max(0,sub-disc);
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  const show=(id,v)=>{const el=document.getElementById(id);if(el)el.style.display=v;};
+  set('sale-subtotal',N(sub));
+  set('sale-total',N(total));
+  set('sale-discount-amt','−'+N(disc));
+  show('sale-discount-row',disc>0?'':'none');
+  const btn=document.getElementById('sale-submit-btn');
+  if(btn) btn.disabled=!S.saleRows.some(r=>r.productId);
+}
+function _refreshRowPrice(rowId){
+  const r=S.saleRows.find(x=>x.rowId===rowId);
+  const p=r&&products.find(x=>x.id===r.productId);
+  const el=document.getElementById('rp_'+rowId);
+  if(!el) return;
+  if(p) el.innerHTML=`<div style="font-size:11px;color:var(--muted)">${N(p.price)} × ${r.qty||1}</div><div class="mono" style="font-size:15px;font-weight:700">${N(p.price*(r.qty||1))}</div>`;
+  else el.innerHTML=`<div style="color:var(--muted);font-size:12px">—</div>`;
+}
+
 
 /* ─── Sales tracker ─── */
 function renderHistory(){
@@ -1699,7 +1751,7 @@ function _refreshPickerDrop(rowId){
   const row=S.saleRows.find(r=>r.rowId===rowId);
   const el=document.getElementById('pkd_'+rowId);
   if(!el||!row) return;
-  if(!row.open){ el.style.display='none'; return; }
+  if(!row.open){ if(el.style) el.style.display='none'; return; }
   const srch=(row.search||'').toLowerCase();
   const filtered=products.filter(px=>px.stock>0&&(
     px.name.toLowerCase().includes(srch)||
@@ -1707,7 +1759,7 @@ function _refreshPickerDrop(rowId){
     px.category.toLowerCase().includes(srch)||
     (px.subcategory||'').toLowerCase().includes(srch)
   )).slice(0,10);
-  el.style.display='block';
+  if(el.style) el.style.display='block';
   if(!filtered.length){
     el.innerHTML=`<div style="padding:13px;text-align:center;color:var(--muted);font-size:12.5px">${srch?`No results for "${row.search}"`:'No products in stock'}</div>`;
     return;
@@ -1982,15 +2034,20 @@ function expenseForm(){
 }
 function userForm(){
   return`<div class="sheet-handle"></div>
-    <div class="sheet-head"><h3>Invite user</h3><button class="icon-btn" onclick="closeModal()">${icon("x",13)}</button></div>
+    <div class="sheet-head"><h3>Add staff member</h3><button class="icon-btn" onclick="closeModal()">${icon("x",13)}</button></div>
     <div class="sheet-body">
-      <div class="field"><label>Full name</label><input id="f-u-name" placeholder="e.g. Bisi Adeyemi"/></div>
+      <div class="field"><label>Full name</label><input id="f-u-name" placeholder="e.g. Amaka Obi"/></div>
       <div class="field"><label>Email</label><input id="f-u-email" type="email" placeholder="name@8fifteenwellness.com"/></div>
       <div class="field"><label>Role</label><select id="f-u-role"><option>Staff</option><option>Admin</option></select></div>
+      <div class="field">
+        <label>Password</label>
+        <input id="f-u-pass" type="password" placeholder="Set a password (min 6 characters)"/>
+        <div style="font-size:11px;color:var(--muted);margin-top:5px">Staff will use this to log in. They can change it from Settings.</div>
+      </div>
     </div>
     <div class="sheet-foot">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveUser()">${icon("check",13)} Send</button>
+      <button class="btn btn-primary" onclick="saveUser()">${icon("check",13)} Add member</button>
     </div>`;
 }
 function refreshSubcatOptions(catName, selectedSub){
@@ -2102,7 +2159,13 @@ function removeRow(rowId){
   renderContent();
 }
 function setRP(rowId,pid){const r=S.saleRows.find(x=>x.rowId===rowId);if(r){r.productId=pid;r.qty=r.qty||1;}renderContent();}
-function setRQ(rowId,v){const r=S.saleRows.find(x=>x.rowId===rowId);if(r)r.qty=Math.max(1,parseInt(v)||1);renderContent();}
+function setRQ(rowId,v){
+  const r=S.saleRows.find(x=>x.rowId===rowId);
+  if(!r) return;
+  r.qty=Math.max(1,parseInt(v)||1);
+  _refreshRowPrice(rowId);
+  _refreshSaleTotals();
+}
 
 function completeSale(){
   const valid=validRows();if(!valid.length){alert("Add at least one product.");return;}
@@ -2206,11 +2269,15 @@ function delExpense(id){
 function saveUser(){
   const name=document.getElementById("f-u-name").value.trim();
   const email=document.getElementById("f-u-email").value.trim();
+  const role=document.getElementById("f-u-role").value;
+  const pass=(document.getElementById("f-u-pass")?.value||"staff123").trim()||"staff123";
   if(!name||!email){alert("Name and email required.");return;}
-  const u={id:uid("u"),name,email,role:document.getElementById("f-u-role").value};
+  if(pass.length<6){alert("Password must be at least 6 characters.");return;}
+  const u={id:uid("u"),name,email,role};
   users.push(u);
+  STAFF_PASSWORDS[email.toLowerCase()]=pass;
   sheetPost('addUser', u);
-  closeModal();renderContent();showToast(`Invite sent to ${name}`);
+  closeModal();renderContent();showToast(`${name} added · password set`);
 }
 function delUser(id){
   const u=users.find(x=>x.id===id);if(!u)return;
