@@ -671,9 +671,10 @@ async function loadFromSheets() {
     if (d.users && d.users.length) {
       users = d.users.filter(u => u.id && u.name && u.email).map(u => ({
         ...u,
-        name:  String(u.name).trim(),
-        email: String(u.email).trim(),
-        role:  (u.role && u.role.trim()) ? u.role.trim() : 'Staff',
+        name:      String(u.name).trim(),
+        email:     String(u.email).trim(),
+        role:      (u.role && u.role.trim()) ? u.role.trim() : 'Staff',
+        clockCode: u.clockCode || genClockCode(),
       }));
     }
 
@@ -732,7 +733,7 @@ function syncCats(){ CATS=CATS_DATA.map(c=>c.name); CAT_CLR=Object.fromEntries(C
 /* ── Data — starts empty, populated from Google Sheets or manual entry ── */
 let products = [];
 let users    = [
-  {id:"u1",name:"Uthman Muhammad",email:"admin@8fifteenwellness.com",role:"Admin"},
+  {id:"u1",name:"Uthman Muhammad",email:"admin@8fifteenwellness.com",role:"Admin",clockCode:"0000"},
 ];
 function dStr(n){const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10);}
 const TODAY=dStr(0), YDAY=dStr(1);
@@ -752,6 +753,7 @@ const S={
   saleRows:[{rowId:"row_1",productId:"",qty:1,search:"",open:false}],payment:"Cash",discount:0,customerName:"",
   histSearch:"",histFrom:"",histTo:"",histCat:"All",custSearch:"",repPeriod:"week",attPeriod:"today",attStaff:"All",
   modal:null, receiptSale:null, showConnectionForm:false, accPeriod:'all',
+  clockCodeInput:'', clockCodeUser:null,
 };
 
 /* ── Helpers ── */
@@ -818,7 +820,12 @@ function quickLoginStaff(userId){
   closeModal();
 }
 
-/* ── Aggregates ── */
+function genClockCode(){
+  const used=users.map(u=>u.clockCode).filter(Boolean);
+  let code;
+  do { code=String(Math.floor(1000+Math.random()*9000)); } while(used.includes(code));
+  return code;
+}
 const low=()=>products.filter(p=>p.stock<=p.low);
 const stockUnits=()=>products.reduce((s,p)=>s+p.stock,0);
 const costVal=()=>products.reduce((s,p)=>s+p.stock*p.cost,0);
@@ -1592,12 +1599,15 @@ function saveShopManual(){
 }
 /* ─── Attendance ─── */
 function renderAttendance(){
-  const shop=getShopConfig();
+  // If a user has been identified via code, show confirm screen
+  if(S.clockCodeUser) return renderClockConfirm(S.clockCodeUser);
+  // Otherwise show code entry
+  return renderCodeEntry();
+}
+
+function renderCodeEntry(){
   const adm=S.role==='admin';
-  const clkedIn=isClockedIn();
-  const myRecs=attendance.filter(a=>a.date===TODAY&&a.staffName===S.currentUser?.name)
-    .sort((a,b)=>a.time.localeCompare(b.time));
-  const presentNow=whoIsIn();
+  const shop=getShopConfig();
   const period=S.attPeriod||'today';
   function attFilter(list){
     if(period==='today') return list.filter(a=>a.date===TODAY);
@@ -1607,40 +1617,54 @@ function renderAttendance(){
   }
   const filtAtt=attFilter(attendance).filter(a=>S.attStaff==='All'||a.staffName===S.attStaff);
   const allStaff=[...new Set(attendance.map(a=>a.staffName))].sort();
+  const presentNow=whoIsIn();
   const nowTime=new Date().toTimeString().slice(0,5);
   const nowDate=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const code=S.clockCodeInput||'';
+  const dots='●'.repeat(code.length)+'○'.repeat(Math.max(0,4-code.length));
 
   return`
+    <!-- Code entry panel -->
     <div class="panel" style="margin-bottom:14px">
-      <div style="padding:24px 20px;text-align:center">
-        <div id="att-clock" style="font-family:'Bodoni Moda',serif;font-size:40px;font-weight:600;letter-spacing:-.02em;margin-bottom:4px">${nowTime}</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:20px">${nowDate}</div>
-        ${shop?`<div style="display:inline-flex;align-items:center;gap:7px;padding:8px 16px;background:var(--surface);border:1px solid var(--line);border-radius:999px;font-size:12.5px;margin-bottom:20px;color:var(--muted)">${icon('pin',13)} ${shop.name||'Shop'} · ${shop.radius||100}m radius</div>`:`<div style="display:inline-flex;align-items:center;gap:7px;padding:8px 16px;background:var(--warn-bg);border-radius:999px;font-size:12px;color:var(--warn);margin-bottom:20px">${icon('alert',13)} Shop location not set${adm?` — <button onclick="openModal('setupGeofence')" style="color:var(--accent);background:none;border:none;cursor:pointer;font-size:inherit;text-decoration:underline">Set it now</button>`:''}</div>`}
-        <div style="margin-bottom:20px">${clkedIn?`<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 16px;background:var(--success-bg);border-radius:999px;font-size:12px;font-weight:700;color:var(--success)">${icon('check',12)} On duty since ${myRecs.filter(r=>r.type==='in').slice(-1)[0]?.time||'—'}</span>`:`<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 16px;background:var(--bg);border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--muted)">Not clocked in</span>`}</div>
-        <button id="clk-btn" onclick="clockInOut()" style="padding:16px 40px;font-size:16px;font-weight:700;border-radius:var(--r);border:none;cursor:pointer;letter-spacing:.02em;display:inline-flex;align-items:center;gap:9px;background:${clkedIn?'var(--danger-bg)':'var(--accent)'};color:${clkedIn?'var(--danger)':'var(--accent-ink)'}">
-          ${clkedIn?`${icon('x',16)} Clock Out`:`${icon('check',16)} Clock In`}
-        </button>
-        <div id="clk-msg" style="min-height:22px;margin-top:12px;font-size:13px"></div>
+      <div style="padding:28px 20px 24px;text-align:center">
+        <!-- Live clock -->
+        <div id="att-clock" style="font-family:'Bodoni Moda',serif;font-size:42px;font-weight:600;letter-spacing:-.02em;margin-bottom:4px">${nowTime}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:24px">${nowDate}</div>
+
+        <!-- Code display dots -->
+        <div style="font-size:28px;letter-spacing:.35em;color:var(--accent);margin-bottom:6px;font-family:'IBM Plex Mono',monospace">${dots}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Enter your 4-digit clocking code</div>
+
+        <!-- Hidden input (auto-focuses number keyboard on mobile) -->
+        <input id="clk-code-input" type="tel" inputmode="numeric" maxlength="4"
+          value="${code}" autocomplete="off"
+          oninput="handleCodeInput(this.value)"
+          style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none"/>
+
+        <!-- PIN pad -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto 16px">
+          ${[1,2,3,4,5,6,7,8,9,'⌫',0,'✓'].map(k=>`
+            <button onclick="${k==='⌫'?'pinBack()':k==='✓'?'pinConfirm()':`pinPress('${k}')`}"
+              style="height:56px;border-radius:var(--r-sm);border:1px solid var(--line);background:${k==='✓'?'var(--accent)':'var(--paper)'};
+              color:${k==='✓'?'var(--accent-ink)':'var(--ink)'};font-size:${k==='⌫'||k==='✓'?'18':'22'}px;font-weight:600;cursor:pointer;
+              transition:transform .08s,background .1s;display:flex;align-items:center;justify-content:center"
+              onmousedown="this.style.transform='scale(.92)'" onmouseup="this.style.transform=''">
+              ${k}
+            </button>`).join('')}
+        </div>
+
+        <div id="clk-code-msg" style="min-height:20px;font-size:13px"></div>
+        <div style="margin-top:10px;font-size:11px;color:var(--muted)">Tap any key or use your keyboard</div>
       </div>
-      ${myRecs.length>0?`<div style="border-top:1px solid var(--line);padding:14px 20px">
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:10px">Today's record</div>
-        ${myRecs.map(r=>`<div style="display:flex;align-items:center;gap:10px;font-size:13px;margin-bottom:8px">
-          <span style="width:28px;height:28px;border-radius:50%;background:${r.type==='in'?'var(--success-bg)':'var(--danger-bg)'};display:flex;align-items:center;justify-content:center;flex-shrink:0">${r.type==='in'?icon('check',12):icon('x',12)}</span>
-          <span style="font-weight:600">Clock ${r.type==='in'?'In':'Out'}</span>
-          <span class="mono" style="color:var(--muted)">${r.time}</span>
-          ${r.distance?`<span style="font-size:11px;color:var(--muted)">· ${r.distance}m</span>`:''}
-          ${r.manual?`<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);padding:2px 7px;border-radius:999px">manual</span>`:''}
-        </div>`).join('')}
-        ${todayHours(S.currentUser?.name)?`<div style="font-size:12px;color:var(--muted);padding-top:6px;border-top:1px dashed var(--line)">Time on duty: <b style="color:var(--ink)">${todayHours(S.currentUser.name)}</b></div>`:''}
-      </div>`:''}
     </div>
 
     ${adm?`
+    <!-- Admin: who's in now -->
     <div class="panel" style="margin-bottom:14px">
       <div class="panel-head">
         <h3>${icon('users',12)} On duty now</h3>
         <span style="font-size:12px;color:var(--muted)">${presentNow.length} in</span>
-        <button class="btn btn-ghost btn-sm" onclick="openModal('setupGeofence')">${icon('pin',12)} ${shop?'Edit geofence':'Setup geofence'}</button>
+        <button class="btn btn-ghost btn-sm" onclick="openModal('setupGeofence')">${icon('pin',12)} ${shop?'Geofence':'Setup geofence'}</button>
       </div>
       <div style="padding:12px 18px">
         ${users.length<=1?`<div style="color:var(--muted);font-size:13px;padding:8px 0">No staff added yet.</div>`:
@@ -1651,17 +1675,21 @@ function renderAttendance(){
             return`<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px">
               <div style="display:flex;align-items:center;gap:10px">
                 <span style="width:10px;height:10px;border-radius:50%;background:${in_?'var(--success)':'var(--line)'};flex-shrink:0"></span>
-                <div><div style="font-weight:600">${u.name}</div><div style="font-size:11px;color:var(--muted)">${lastRec?`${lastRec.type==='in'?'Clocked in':'Clocked out'} ${lastRec.time}`:'No record today'}</div></div>
+                <div>
+                  <div style="font-weight:600">${u.name}</div>
+                  <div style="font-size:11px;color:var(--muted)">${lastRec?`${lastRec.type==='in'?'Clocked in':'Clocked out'} ${lastRec.time}`:'No record today'}</div>
+                </div>
               </div>
               <div style="text-align:right">
                 <span style="padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:${in_?'var(--success-bg)':'var(--bg)'};color:${in_?'var(--success)':'var(--muted)'}">${in_?'In':'Out'}</span>
-                ${hrs?`<div style="font-size:11px;color:var(--muted);margin-top:3px">${hrs}</div>`:''}
+                ${hrs?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${hrs}</div>`:''}
               </div>
             </div>`;
           }).join('')}
       </div>
     </div>
 
+    <!-- Admin: Attendance log -->
     <div class="panel">
       <div class="panel-head"><h3>Attendance log</h3></div>
       <div style="padding:10px 16px;border-bottom:1px solid var(--line);display:flex;gap:7px;flex-wrap:wrap;align-items:center">
@@ -1689,8 +1717,165 @@ function renderAttendance(){
       </div>
     </div>`:''}
 
-    <script>clearInterval(window._attTick);window._attTick=setInterval(()=>{const el=document.getElementById('att-clock');if(!el)clearInterval(window._attTick);else el.textContent=new Date().toTimeString().slice(0,5);},1000);<\/script>`;
+    <script>
+      clearInterval(window._attTick);
+      window._attTick=setInterval(()=>{const el=document.getElementById('att-clock');if(!el){clearInterval(window._attTick);}else{el.textContent=new Date().toTimeString().slice(0,5);}},1000);
+      // Focus hidden input to capture keyboard on desktop
+      setTimeout(()=>{const el=document.getElementById('clk-code-input');if(el)el.focus();},100);
+    <\/script>`;
 }
+
+function renderClockConfirm(user){
+  const clkedIn=isClockedIn(user.name);
+  const myRecs=attendance.filter(a=>a.date===TODAY&&a.staffName===user.name).sort((a,b)=>a.time.localeCompare(b.time));
+  const shop=getShopConfig();
+  const initial=user.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+  return`
+    <div class="panel">
+      <div style="padding:32px 20px 28px;text-align:center">
+        <!-- Avatar -->
+        <div style="width:72px;height:72px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:24px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">${initial}</div>
+        <div style="font-family:'Bodoni Moda',serif;font-size:24px;font-weight:600;margin-bottom:4px">${user.name}</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:6px">${user.role}</div>
+        <span style="display:inline-block;padding:3px 12px;border-radius:999px;font-size:11px;font-weight:700;background:var(--accent-bg);color:var(--accent-dark);margin-bottom:22px;font-family:'IBM Plex Mono',monospace">Code: ${user.clockCode}</span>
+
+        <!-- Status -->
+        <div style="margin-bottom:22px">
+          ${clkedIn
+            ?`<div style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--success-bg);border-radius:999px;font-size:13px;font-weight:700;color:var(--success)">${icon('check',13)} On duty since ${myRecs.filter(r=>r.type==='in').slice(-1)[0]?.time||'—'}</div>`
+            :`<div style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--bg);border:1px solid var(--line);border-radius:999px;font-size:13px;color:var(--muted)">Not clocked in today</div>`}
+          ${todayHours(user.name)?`<div style="font-size:12px;color:var(--muted);margin-top:8px">Time on duty today: <b style="color:var(--ink)">${todayHours(user.name)}</b></div>`:''}
+        </div>
+
+        <!-- Today's timeline -->
+        ${myRecs.length>0?`<div style="max-width:280px;margin:0 auto 20px;text-align:left">
+          ${myRecs.map(r=>`<div style="display:flex;align-items:center;gap:9px;font-size:13px;margin-bottom:8px">
+            <span style="width:26px;height:26px;border-radius:50%;background:${r.type==='in'?'var(--success-bg)':'var(--danger-bg)'};display:flex;align-items:center;justify-content:center;flex-shrink:0">${r.type==='in'?icon('check',11):icon('x',11)}</span>
+            <span style="font-weight:600">Clock ${r.type==='in'?'In':'Out'}</span>
+            <span class="mono" style="color:var(--muted)">${r.time}</span>
+            ${r.manual?`<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);padding:1px 6px;border-radius:999px">manual</span>`:''}
+          </div>`).join('')}
+        </div>`:``}
+
+        <!-- Action button -->
+        <button id="clk-btn" onclick="clockInOutForUser('${user.id}')"
+          style="padding:16px 48px;font-size:16px;font-weight:700;border-radius:var(--r);border:none;cursor:pointer;
+          background:${clkedIn?'var(--danger-bg)':'var(--accent)'};
+          color:${clkedIn?'var(--danger)':'var(--accent-ink)'};
+          display:inline-flex;align-items:center;gap:9px;margin-bottom:12px">
+          ${clkedIn?`${icon('x',16)} Clock Out`:`${icon('check',16)} Clock In`}
+        </button>
+        <div id="clk-msg" style="min-height:22px;font-size:13px;margin-bottom:14px"></div>
+
+        <!-- Back -->
+        <button onclick="S.clockCodeUser=null;S.clockCodeInput='';renderContent()"
+          style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline">
+          Not you? Go back
+        </button>
+      </div>
+    </div>
+
+    <script>clearInterval(window._attTick);<\/script>`;
+}
+
+/* ─── PIN pad input handlers ─── */
+function pinPress(digit){
+  if(S.clockCodeInput.length>=4) return;
+  S.clockCodeInput+=digit;
+  _updatePinDisplay();
+  if(S.clockCodeInput.length===4) setTimeout(()=>pinConfirm(),100);
+}
+function pinBack(){
+  if(S.clockCodeInput.length===0) return;
+  S.clockCodeInput=S.clockCodeInput.slice(0,-1);
+  _updatePinDisplay();
+}
+function pinConfirm(){
+  const code=S.clockCodeInput;
+  if(code.length<4){const msg=document.getElementById('clk-code-msg');if(msg)msg.innerHTML=`<span style="color:var(--muted)">Enter all 4 digits</span>`;return;}
+  const user=users.find(u=>u.clockCode===code);
+  if(!user){
+    const msg=document.getElementById('clk-code-msg');
+    if(msg)msg.innerHTML=`<span style="color:var(--danger)">Code not recognised — try again</span>`;
+    setTimeout(()=>{
+      S.clockCodeInput='';
+      _updatePinDisplay();
+      const el=document.getElementById('clk-code-msg');if(el)el.innerHTML='';
+    },1800);
+    return;
+  }
+  S.clockCodeUser=user;
+  S.clockCodeInput='';
+  renderContent();
+}
+function handleCodeInput(val){
+  // Handles real keyboard input on the hidden input
+  S.clockCodeInput=val.replace(/\D/g,'').slice(0,4);
+  _updatePinDisplay();
+  if(S.clockCodeInput.length===4) setTimeout(()=>pinConfirm(),100);
+}
+function _updatePinDisplay(){
+  const code=S.clockCodeInput||'';
+  const dots='●'.repeat(code.length)+'○'.repeat(Math.max(0,4-code.length));
+  // Update the dot display without full re-render
+  const displays=document.querySelectorAll?document.querySelectorAll('[data-pin-display]'):[];
+  if(displays&&displays.length) displays.forEach(el=>el.textContent=dots);
+  else {
+    // Fallback: find by looking at the page and update
+    renderContent();
+  }
+}
+
+async function clockInOutForUser(userId){
+  const user=users.find(u=>u.id===userId); if(!user) return;
+  const btn=document.getElementById('clk-btn');
+  const msg=document.getElementById('clk-msg');
+  if(btn)btn.disabled=true;
+  if(msg)msg.innerHTML=`<span style="color:var(--muted)">📍 Checking location…</span>`;
+
+  const shop=getShopConfig();
+  const type=isClockedIn(user.name)?'out':'in';
+
+  try{
+    let pos=null,distance=null,withinFence=true;
+    if(shop&&shop.lat&&shop.lng){
+      pos=await getCurrentPosition();
+      distance=haversine(pos.lat,pos.lng,shop.lat,shop.lng);
+      withinFence=distance<=(shop.radius||100);
+      if(!withinFence&&type==='in'){
+        if(msg)msg.innerHTML=`<span style="color:var(--danger)">⚠ ${distance}m from shop (limit ${shop.radius||100}m) — move closer to clock in.</span>`;
+        if(btn)btn.disabled=false;
+        return;
+      }
+    }
+    const time=new Date().toTimeString().slice(0,5);
+    const rec={id:uid('att'),staffName:user.name,staffEmail:user.email||'',type,date:TODAY,time,
+      lat:pos?.lat||null,lng:pos?.lng||null,distance:distance||null,withinFence,manual:false};
+    attendance.push(rec);
+    sheetPost('addAttendance',rec);
+    if(msg)msg.innerHTML=`<span style="color:var(--success)">✓ ${type==='in'?'Clocked in':'Clocked out'} at ${time}${distance?` · ${distance}m from shop`:''}</span>`;
+    // Auto return to code entry after 2.5s
+    setTimeout(()=>{S.clockCodeUser=null;S.clockCodeInput='';renderContent();},2500);
+  }catch(err){
+    if(msg)msg.innerHTML=`<span style="color:var(--danger)">${err.message}.
+      <button onclick="clockInOutManualForUser('${userId}')" style="color:var(--accent);text-decoration:underline;background:none;border:none;cursor:pointer;font-size:inherit">Record manually</button></span>`;
+    if(btn)btn.disabled=false;
+  }
+}
+function clockInOutManualForUser(userId){
+  const user=users.find(u=>u.id===userId); if(!user) return;
+  const type=isClockedIn(user.name)?'out':'in';
+  const time=new Date().toTimeString().slice(0,5);
+  const rec={id:uid('att'),staffName:user.name,staffEmail:user.email||'',type,date:TODAY,time,
+    lat:null,lng:null,distance:null,withinFence:null,manual:true};
+  attendance.push(rec);
+  sheetPost('addAttendance',rec);
+  const msg=document.getElementById('clk-msg');
+  if(msg)msg.innerHTML=`<span style="color:var(--warn)">⚠ Recorded manually at ${time} (no GPS)</span>`;
+  setTimeout(()=>{S.clockCodeUser=null;S.clockCodeInput='';renderContent();},2500);
+}
+
 
 function geofenceSetupModal(){
   const shop=getShopConfig();
@@ -2228,20 +2413,51 @@ function renderAccounting(){
     </div>`;
 }
 
+function regenCode(userId){
+  const u=users.find(x=>x.id===userId);
+  if(!u) return;
+  u.clockCode=genClockCode();
+  sheetPost('addUser',u); // re-sync updated user
+  renderContent();
+  showToast(`${u.name}'s new code: ${u.clockCode}`);
+}
+
 /* ─── Users ─── */
 function renderUsers(){
   return`<div class="panel">
-    <div class="panel-head"><h3>Team</h3><button class="btn btn-ghost btn-sm" onclick="openModal('addUser')">${icon("plus",12)} Invite</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead><tbody>
-      ${users.map(u=>`<tr><td>${u.name}</td><td class="mono" style="color:var(--muted)">${u.email}</td>
+    <div class="panel-head"><h3>Team</h3><button class="btn btn-ghost btn-sm" onclick="openModal('addUser')">${icon("plus",12)} Add staff</button></div>
+    <!-- Desktop table -->
+    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Clock code</th><th></th></tr></thead><tbody>
+      ${users.map(u=>`<tr>
+        <td>${u.name}</td>
+        <td class="mono" style="color:var(--muted)">${u.email}</td>
         <td><span class="role-pill ${u.role.toLowerCase()}">${u.role}</span></td>
-        <td><span class="icon-btn" onclick="delUser('${u.id}')">${icon("trash",12)}</span></td></tr>`).join("")}
+        <td>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;letter-spacing:.12em;color:var(--accent)">${u.clockCode||'—'}</span>
+          ${u.clockCode?`<button class="icon-btn" style="margin-left:8px;width:26px;height:26px" onclick="regenCode('${u.id}')" title="Regenerate code">${icon("refresh",11)}</button>`:''}
+        </td>
+        <td><span class="icon-btn" onclick="delUser('${u.id}')">${icon("trash",12)}</span></td>
+      </tr>`).join("")}
     </tbody></table></div>
+    <!-- Mobile cards -->
     <div class="data-cards" style="padding:12px">
       ${users.map(u=>`<div class="data-card">
         <div class="dc-row"><span class="dc-title">${u.name}</span><span class="role-pill ${u.role.toLowerCase()}">${u.role}</span></div>
-        <div class="dc-row"><span class="dc-meta mono">${u.email}</span><button class="icon-btn" onclick="delUser('${u.id}')">${icon("trash",12)}</button></div>
+        <div class="dc-row"><span class="dc-meta mono">${u.email}</span></div>
+        <div class="dc-row" style="margin-top:8px;align-items:center">
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px">Clock code</div>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:700;letter-spacing:.12em;color:var(--accent)">${u.clockCode||'—'}</span>
+          </div>
+          <div style="display:flex;gap:7px">
+            ${u.clockCode?`<button class="btn btn-ghost btn-sm" onclick="regenCode('${u.id}')">${icon("refresh",11)} New code</button>`:''}
+            <button class="icon-btn" onclick="delUser('${u.id}')">${icon("trash",12)}</button>
+          </div>
+        </div>
       </div>`).join("")}
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.7">
+      Share each staff member's code with them privately. They enter it on the Attendance screen to clock in or out.
     </div>
   </div>`;
 }
@@ -3074,11 +3290,12 @@ function saveUser(){
   const pass=(document.getElementById("f-u-pass")?.value||"staff123").trim()||"staff123";
   if(!name||!email){alert("Name and email required.");return;}
   if(pass.length<6){alert("Password must be at least 6 characters.");return;}
-  const u={id:uid("u"),name,email,role};
+  const clockCode=genClockCode();
+  const u={id:uid("u"),name,email,role,clockCode};
   users.push(u);
   STAFF_PASSWORDS[email.toLowerCase()]=pass;
   sheetPost('addUser', u);
-  closeModal();renderContent();showToast(`${name} added · password set`);
+  closeModal();renderContent();showToast(`${name} added · code: ${clockCode}`);
 }
 function delUser(id){
   const u=users.find(x=>x.id===id);if(!u)return;
