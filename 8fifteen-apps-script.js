@@ -27,6 +27,12 @@ function doPost(e) {
     if (action === 'deleteExpense')  return ok(deleteRow('Expenses', data.id));
     if (action === 'addUser')        return ok(addRow('Users', [data.id,data.name,data.email,data.role]));
     if (action === 'deleteUser')     return ok(deleteRow('Users', data.id));
+    if (action === 'addAttendance')  return ok(addRow('Attendance', [
+      data.id, data.staffName, data.staffEmail||'', data.type,
+      data.date, data.time, data.lat||'', data.lng||'',
+      data.distance||'', data.withinFence===null?'manual':data.withinFence?'yes':'no',
+      data.manual?'yes':'no'
+    ]));
 
     // ── Email actions ──
     if (action === 'sendTestEmail') {
@@ -65,6 +71,7 @@ function getAllData() {
     sales:    readSales(),
     expenses: readSheet('Expenses', ['id','date','description','category','amount']),
     users:    readSheet('Users',    ['id','name','email','role']),
+    attendance: readSheet('Attendance', ['id','staffName','staffEmail','type','date','time','lat','lng','distance','withinFence','manual']),
   };
 }
 function readSheet(sheetName, cols) {

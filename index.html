@@ -552,6 +552,7 @@ const I = {
   plus:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
   x:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
   check:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  pin:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
   alert:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.3 3.9-8 14A1.6 1.6 0 0 0 3.7 20h16.6a1.6 1.6 0 0 0 1.4-2.4l-8-14a1.6 1.6 0 0 0-2.8 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
   trend:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`,
   chevron:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`,
@@ -676,6 +677,9 @@ async function loadFromSheets() {
       }));
     }
 
+    /* ── Load attendance ── */
+    if (d.attendance && d.attendance.length) attendance = d.attendance;
+
     DB_STATE='live'; renderSyncBadge(); renderContent();
   } catch(e) {
     DB_STATE='error'; renderSyncBadge();
@@ -737,6 +741,7 @@ let rcCounter  = 1001;
 let expenses   = [];
 let expCounter = 1;
 let stockLog   = [];
+let attendance = [];
 
 /* ── State ── */
 const S={
@@ -745,7 +750,7 @@ const S={
   drawerOpen:false,moreSheetOpen:false,
   invSearch:"",invCat:"All",
   saleRows:[{rowId:"row_1",productId:"",qty:1,search:"",open:false}],payment:"Cash",discount:0,customerName:"",
-  histSearch:"",histFrom:"",histTo:"",histCat:"All",custSearch:"",repPeriod:"week",
+  histSearch:"",histFrom:"",histTo:"",histCat:"All",custSearch:"",repPeriod:"week",attPeriod:"today",attStaff:"All",
   modal:null, receiptSale:null, showConnectionForm:false, accPeriod:'all',
 };
 
@@ -754,7 +759,7 @@ const N=n=>"₦"+Math.round(n||0).toLocaleString("en-NG");
 const Pct=n=>(isFinite(n)?n:0).toFixed(1)+"%";
 const uid=p=>p+"_"+Math.random().toString(36).slice(2,8);
 const fmt=d=>new Date(d+"T00:00").toLocaleDateString("en-GB",{day:"2-digit",month:"short"});
-const TITLE={dashboard:"Today's overview",inventory:"Inventory",sales:"New Sale",history:"Sales tracker",customers:"Customers",salesreps:"Sales Reps",category:"Categories",accounting:"Accounting",reports:"Reports & Analytics",users:"Users",settings:"Settings"};
+const TITLE={dashboard:"Today's overview",inventory:"Inventory",sales:"New Sale",history:"Sales tracker",customers:"Customers",salesreps:"Sales Reps",category:"Categories",attendance:"Attendance",accounting:"Accounting",reports:"Reports & Analytics",users:"Users",settings:"Settings"};
 
 /* ── Auth ── */
 const CREDS = [
@@ -896,6 +901,7 @@ function allNavItems(){
     {id:"sales",      label:"New Sale",   icon:"cart"},
     {id:"history",    label:"Sales",      icon:"history"},
     {id:"customers",  label:"Customers",  icon:"users"},
+    {id:"attendance", label:"Attendance", icon:"check"},
     {id:"category",   label:"Categories", icon:"layers"},
   ];
   if(S.role==="admin"){
@@ -1066,6 +1072,7 @@ function renderContent(){
   else if(S.view==="inventory")html=renderInventory();
   else if(S.view==="sales")html=renderSales();
   else if(S.view==="salesreps"&&S.role==="admin")html=renderSalesReps();
+  else if(S.view==="attendance")html=renderAttendance();
   else if(S.view==="customers")html=renderCustomers();
   else if(S.view==="history")html=renderHistory();
   else if(S.view==="category")html=renderCategory();
@@ -1461,7 +1468,255 @@ function renderCategory(){
     </div>`;
 }
 
-/* ─── Sales Rep Tracker ─── */
+/* ─── Geofencing & Attendance helpers ─── */
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371000,r=x=>x*Math.PI/180;
+  const dLat=r(lat2-lat1),dLon=r(lon2-lon1);
+  const a=Math.sin(dLat/2)**2+Math.cos(r(lat1))*Math.cos(r(lat2))*Math.sin(dLon/2)**2;
+  return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+}
+function getShopConfig(){try{return JSON.parse(localStorage.getItem('8fw_shop')||'null');}catch{return null;}}
+function saveShopConfig(cfg){localStorage.setItem('8fw_shop',JSON.stringify(cfg));}
+function getCurrentPosition(){
+  return new Promise((resolve,reject)=>{
+    if(!navigator.geolocation){reject(new Error('Geolocation not supported on this device'));return;}
+    navigator.geolocation.getCurrentPosition(
+      p=>resolve({lat:p.coords.latitude,lng:p.coords.longitude,accuracy:Math.round(p.coords.accuracy)}),
+      e=>reject(new Error(e.code===1?'Location access denied — please allow location in browser settings':e.code===2?'Location unavailable':'Location timed out')),
+      {enableHighAccuracy:true,timeout:12000,maximumAge:30000}
+    );
+  });
+}
+function isClockedIn(staffName){
+  const name=staffName||S.currentUser?.name||'';
+  const recs=attendance.filter(a=>a.date===TODAY&&a.staffName===name).sort((a,b)=>b.time.localeCompare(a.time));
+  return recs.length>0&&recs[0].type==='in';
+}
+function todayHours(staffName){
+  const recs=attendance.filter(a=>a.date===TODAY&&a.staffName===staffName).sort((a,b)=>a.time.localeCompare(b.time));
+  let total=0,lastIn=null;
+  recs.forEach(r=>{
+    if(r.type==='in') lastIn=r.time;
+    else if(r.type==='out'&&lastIn){
+      const [ih,im]=lastIn.split(':').map(Number);
+      const [oh,om]=r.time.split(':').map(Number);
+      total+=(oh*60+om)-(ih*60+im);
+      lastIn=null;
+    }
+  });
+  if(lastIn){const[ih,im]=lastIn.split(':').map(Number);const now=new Date();total+=(now.getHours()*60+now.getMinutes())-(ih*60+im);}
+  if(total<=0)return null;
+  const h=Math.floor(total/60),m=total%60;
+  return h>0?`${h}h ${m}m`:`${m}m`;
+}
+function whoIsIn(){
+  // get unique staff on duty today (last record = 'in')
+  const staffSet=[...new Set(attendance.filter(a=>a.date===TODAY).map(a=>a.staffName))];
+  return staffSet.filter(n=>isClockedIn(n));
+}
+
+/* ─── Clock In/Out actions ─── */
+async function clockInOut(){
+  const btn=document.getElementById('clk-btn');
+  const msg=document.getElementById('clk-msg');
+  if(btn)btn.disabled=true;
+  if(msg)msg.innerHTML=`<span style="color:var(--muted)">📍 Getting your location…</span>`;
+
+  const shop=getShopConfig();
+  const type=isClockedIn()?'out':'in';
+
+  try{
+    let pos=null,distance=null,withinFence=true;
+    if(shop&&shop.lat&&shop.lng){
+      pos=await getCurrentPosition();
+      distance=haversine(pos.lat,pos.lng,shop.lat,shop.lng);
+      withinFence=distance<=(shop.radius||100);
+      if(!withinFence&&type==='in'){
+        if(msg)msg.innerHTML=`<span style="color:var(--danger)">⚠ You're <b>${distance}m</b> from the shop (limit: ${shop.radius||100}m). Move closer to clock in.</span>`;
+        if(btn){btn.disabled=false;}
+        return;
+      }
+    }
+    const time=new Date().toTimeString().slice(0,5);
+    const rec={id:uid('att'),staffName:S.currentUser.name,staffEmail:S.currentUser.email||'',
+      type,date:TODAY,time,lat:pos?.lat||null,lng:pos?.lng||null,
+      distance:distance||null,withinFence,manual:false};
+    attendance.push(rec);
+    sheetPost('addAttendance',rec);
+    if(msg)msg.innerHTML=`<span style="color:var(--success)">✓ Clocked ${type} at ${time}${distance?` · ${distance}m from shop`:''}</span>`;
+    renderContent();
+  }catch(err){
+    if(msg)msg.innerHTML=`<span style="color:var(--danger)">${err.message}.
+      <button onclick="clockInOutManual()" style="color:var(--accent);text-decoration:underline;background:none;border:none;cursor:pointer;font-size:inherit">Clock ${type} manually ↗</button></span>`;
+    if(btn)btn.disabled=false;
+  }
+}
+function clockInOutManual(){
+  const type=isClockedIn()?'out':'in';
+  const time=new Date().toTimeString().slice(0,5);
+  const rec={id:uid('att'),staffName:S.currentUser.name,staffEmail:S.currentUser.email||'',
+    type,date:TODAY,time,lat:null,lng:null,distance:null,withinFence:null,manual:true};
+  attendance.push(rec);
+  sheetPost('addAttendance',rec);
+  const msg=document.getElementById('clk-msg');
+  if(msg)msg.innerHTML=`<span style="color:var(--warn)">⚠ Clocked ${type} manually at ${time} (no GPS)</span>`;
+  renderContent();
+}
+async function setShopLocation(){
+  const btn=document.getElementById('shop-loc-btn');
+  const msg=document.getElementById('shop-loc-msg');
+  if(btn)btn.disabled=true;
+  if(msg)msg.textContent='Getting location…';
+  try{
+    const pos=await getCurrentPosition();
+    const existing=getShopConfig()||{};
+    const radius=parseInt(document.getElementById('shop-radius')?.value)||100;
+    const name=(document.getElementById('shop-name')?.value||'').trim()||'8fifteen Wellness';
+    saveShopConfig({...existing,lat:pos.lat,lng:pos.lng,radius,name,accuracy:pos.accuracy});
+    if(msg)msg.innerHTML=`<span style="color:var(--success)">✓ Shop location saved (±${pos.accuracy}m accuracy)</span>`;
+    closeModal();renderContent();showToast('Shop location set');
+  }catch(err){
+    if(msg)msg.innerHTML=`<span style="color:var(--danger)">${err.message}</span>`;
+    if(btn)btn.disabled=false;
+  }
+}
+function saveShopManual(){
+  const lat=parseFloat(document.getElementById('shop-lat')?.value);
+  const lng=parseFloat(document.getElementById('shop-lng')?.value);
+  const radius=parseInt(document.getElementById('shop-radius')?.value)||100;
+  const name=(document.getElementById('shop-name')?.value||'').trim()||'8fifteen Wellness';
+  const msg=document.getElementById('shop-loc-msg');
+  if(isNaN(lat)||isNaN(lng)){if(msg)msg.innerHTML=`<span style="color:var(--danger)">Enter valid coordinates.</span>`;return;}
+  saveShopConfig({lat,lng,radius,name});
+  closeModal();renderContent();showToast('Shop location saved');
+}
+/* ─── Attendance ─── */
+function renderAttendance(){
+  const shop=getShopConfig();
+  const adm=S.role==='admin';
+  const clkedIn=isClockedIn();
+  const myRecs=attendance.filter(a=>a.date===TODAY&&a.staffName===S.currentUser?.name)
+    .sort((a,b)=>a.time.localeCompare(b.time));
+  const presentNow=whoIsIn();
+  const period=S.attPeriod||'today';
+  function attFilter(list){
+    if(period==='today') return list.filter(a=>a.date===TODAY);
+    if(period==='week')  return list.filter(a=>a.date>=dStr(6));
+    if(period==='month') return list.filter(a=>a.date>=dStr(29));
+    return list;
+  }
+  const filtAtt=attFilter(attendance).filter(a=>S.attStaff==='All'||a.staffName===S.attStaff);
+  const allStaff=[...new Set(attendance.map(a=>a.staffName))].sort();
+  const nowTime=new Date().toTimeString().slice(0,5);
+  const nowDate=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  return`
+    <div class="panel" style="margin-bottom:14px">
+      <div style="padding:24px 20px;text-align:center">
+        <div id="att-clock" style="font-family:'Bodoni Moda',serif;font-size:40px;font-weight:600;letter-spacing:-.02em;margin-bottom:4px">${nowTime}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:20px">${nowDate}</div>
+        ${shop?`<div style="display:inline-flex;align-items:center;gap:7px;padding:8px 16px;background:var(--surface);border:1px solid var(--line);border-radius:999px;font-size:12.5px;margin-bottom:20px;color:var(--muted)">${icon('pin',13)} ${shop.name||'Shop'} · ${shop.radius||100}m radius</div>`:`<div style="display:inline-flex;align-items:center;gap:7px;padding:8px 16px;background:var(--warn-bg);border-radius:999px;font-size:12px;color:var(--warn);margin-bottom:20px">${icon('alert',13)} Shop location not set${adm?` — <button onclick="openModal('setupGeofence')" style="color:var(--accent);background:none;border:none;cursor:pointer;font-size:inherit;text-decoration:underline">Set it now</button>`:''}</div>`}
+        <div style="margin-bottom:20px">${clkedIn?`<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 16px;background:var(--success-bg);border-radius:999px;font-size:12px;font-weight:700;color:var(--success)">${icon('check',12)} On duty since ${myRecs.filter(r=>r.type==='in').slice(-1)[0]?.time||'—'}</span>`:`<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 16px;background:var(--bg);border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--muted)">Not clocked in</span>`}</div>
+        <button id="clk-btn" onclick="clockInOut()" style="padding:16px 40px;font-size:16px;font-weight:700;border-radius:var(--r);border:none;cursor:pointer;letter-spacing:.02em;display:inline-flex;align-items:center;gap:9px;background:${clkedIn?'var(--danger-bg)':'var(--accent)'};color:${clkedIn?'var(--danger)':'var(--accent-ink)'}">
+          ${clkedIn?`${icon('x',16)} Clock Out`:`${icon('check',16)} Clock In`}
+        </button>
+        <div id="clk-msg" style="min-height:22px;margin-top:12px;font-size:13px"></div>
+      </div>
+      ${myRecs.length>0?`<div style="border-top:1px solid var(--line);padding:14px 20px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:10px">Today's record</div>
+        ${myRecs.map(r=>`<div style="display:flex;align-items:center;gap:10px;font-size:13px;margin-bottom:8px">
+          <span style="width:28px;height:28px;border-radius:50%;background:${r.type==='in'?'var(--success-bg)':'var(--danger-bg)'};display:flex;align-items:center;justify-content:center;flex-shrink:0">${r.type==='in'?icon('check',12):icon('x',12)}</span>
+          <span style="font-weight:600">Clock ${r.type==='in'?'In':'Out'}</span>
+          <span class="mono" style="color:var(--muted)">${r.time}</span>
+          ${r.distance?`<span style="font-size:11px;color:var(--muted)">· ${r.distance}m</span>`:''}
+          ${r.manual?`<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);padding:2px 7px;border-radius:999px">manual</span>`:''}
+        </div>`).join('')}
+        ${todayHours(S.currentUser?.name)?`<div style="font-size:12px;color:var(--muted);padding-top:6px;border-top:1px dashed var(--line)">Time on duty: <b style="color:var(--ink)">${todayHours(S.currentUser.name)}</b></div>`:''}
+      </div>`:''}
+    </div>
+
+    ${adm?`
+    <div class="panel" style="margin-bottom:14px">
+      <div class="panel-head">
+        <h3>${icon('users',12)} On duty now</h3>
+        <span style="font-size:12px;color:var(--muted)">${presentNow.length} in</span>
+        <button class="btn btn-ghost btn-sm" onclick="openModal('setupGeofence')">${icon('pin',12)} ${shop?'Edit geofence':'Setup geofence'}</button>
+      </div>
+      <div style="padding:12px 18px">
+        ${users.length<=1?`<div style="color:var(--muted);font-size:13px;padding:8px 0">No staff added yet.</div>`:
+          users.map(u=>{
+            const in_=isClockedIn(u.name);
+            const hrs=todayHours(u.name);
+            const lastRec=attendance.filter(a=>a.date===TODAY&&a.staffName===u.name).sort((a,b)=>b.time.localeCompare(a.time))[0];
+            return`<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="width:10px;height:10px;border-radius:50%;background:${in_?'var(--success)':'var(--line)'};flex-shrink:0"></span>
+                <div><div style="font-weight:600">${u.name}</div><div style="font-size:11px;color:var(--muted)">${lastRec?`${lastRec.type==='in'?'Clocked in':'Clocked out'} ${lastRec.time}`:'No record today'}</div></div>
+              </div>
+              <div style="text-align:right">
+                <span style="padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:${in_?'var(--success-bg)':'var(--bg)'};color:${in_?'var(--success)':'var(--muted)'}">${in_?'In':'Out'}</span>
+                ${hrs?`<div style="font-size:11px;color:var(--muted);margin-top:3px">${hrs}</div>`:''}
+              </div>
+            </div>`;
+          }).join('')}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Attendance log</h3></div>
+      <div style="padding:10px 16px;border-bottom:1px solid var(--line);display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+        ${[['today','Today'],['week','7 Days'],['month','30 Days'],['all','All']].map(([k,l])=>`<button class="chip ${period===k?'active':''}" onclick="S.attPeriod='${k}';renderContent()">${l}</button>`).join('')}
+        <select onchange="S.attStaff=this.value;renderContent()" style="margin-left:auto;padding:6px 10px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:12px;background:var(--paper);color:var(--ink)">
+          <option value="All">All staff</option>
+          ${allStaff.map(n=>`<option value="${n}" ${S.attStaff===n?'selected':''}>${n}</option>`).join('')}
+        </select>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Staff</th><th>Date</th><th>Type</th><th>Time</th><th>Distance</th><th>GPS</th></tr></thead><tbody>
+        ${filtAtt.length===0?`<tr class="empty-row"><td colspan="6">No records.</td></tr>`:
+          filtAtt.sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)).map(r=>`<tr>
+            <td style="font-weight:600">${r.staffName}</td><td class="mono">${fmt(r.date)}</td>
+            <td><span style="padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;background:${r.type==='in'?'var(--success-bg)':'var(--danger-bg)'};color:${r.type==='in'?'var(--success)':'var(--danger)'}">${r.type==='in'?'Clock In':'Clock Out'}</span></td>
+            <td class="mono">${r.time}</td><td class="mono" style="color:var(--muted)">${r.distance?r.distance+'m':'—'}</td>
+            <td>${r.manual?`<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);padding:2px 7px;border-radius:999px">manual</span>`:r.withinFence===null?'—':`<span style="font-size:11px;color:${r.withinFence?'var(--success)':'var(--danger)'}">${r.withinFence?'✓':'⚠'}</span>`}</td>
+          </tr>`).join('')}
+      </tbody></table></div>
+      <div class="data-cards" style="padding:10px 12px">
+        ${filtAtt.length===0?`<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px">No records.</div>`:
+          filtAtt.sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)).map(r=>`<div class="data-card">
+            <div class="dc-row"><span style="font-weight:700">${r.staffName}</span><span style="padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;background:${r.type==='in'?'var(--success-bg)':'var(--danger-bg)'};color:${r.type==='in'?'var(--success)':'var(--danger)'}">${r.type==='in'?'In':'Out'}</span></div>
+            <div class="dc-row"><span class="dc-meta">${fmt(r.date)} · ${r.time}${r.distance?' · '+r.distance+'m':''}</span>${r.manual?`<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);padding:2px 7px;border-radius:999px">manual</span>`:''}</div>
+          </div>`).join('')}
+      </div>
+    </div>`:''}
+
+    <script>clearInterval(window._attTick);window._attTick=setInterval(()=>{const el=document.getElementById('att-clock');if(!el)clearInterval(window._attTick);else el.textContent=new Date().toTimeString().slice(0,5);},1000);<\/script>`;
+}
+
+function geofenceSetupModal(){
+  const shop=getShopConfig();
+  return`<div class="sheet-handle"></div>
+    <div class="sheet-head"><h3>${icon('pin',13)} Shop geofence setup</h3><button class="icon-btn" onclick="closeModal()">${icon('x',13)}</button></div>
+    <div class="sheet-body">
+      <div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px">Go to your shop location first, then tap <b>"Use my current location"</b> for the most accurate setup.</div>
+      ${shop?`<div style="padding:11px 13px;background:var(--success-bg);border-radius:var(--r-sm);font-size:12.5px;color:var(--success);margin-bottom:14px">✓ Currently set: ${shop.lat?.toFixed(5)}, ${shop.lng?.toFixed(5)} · ${shop.radius||100}m radius</div>`:''}
+      <div class="field"><label>Shop name</label><input id="shop-name" value="${shop?.name||'8fifteen Wellness'}" placeholder="8fifteen Wellness"/></div>
+      <div class="field"><label>Geofence radius</label>
+        <select id="shop-radius">${[50,75,100,150,200,300].map(r=>`<option value="${r}" ${(shop?.radius||100)===r?'selected':''}>${r} meters</option>`).join('')}</select>
+      </div>
+      <button id="shop-loc-btn" class="btn btn-primary" onclick="setShopLocation()" style="width:100%;justify-content:center;margin-bottom:12px">${icon('pin',13)} Use my current location (recommended)</button>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="shop-lat" placeholder="Latitude e.g. 6.5244" style="flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);color:var(--ink);font-size:13px" value="${shop?.lat||''}"/>
+        <input id="shop-lng" placeholder="Longitude e.g. 3.3792" style="flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);color:var(--ink);font-size:13px" value="${shop?.lng||''}"/>
+      </div>
+      <div id="shop-loc-msg" style="min-height:18px;font-size:12.5px"></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveShopManual()">${icon('check',13)} Save manually</button>
+    </div>`;
+}
+
+
 function getSalesRepStats(periodSales){
   const map={};
   periodSales.forEach(s=>{
@@ -2478,6 +2733,7 @@ function renderModal(){
   else if(S.modal.type==="addUser")body=userForm();
   else if(S.modal.type==="moreNav")body=moreNavSheet();
   else if(S.modal.type==="receipt")body=renderReceiptSheet(S.modal.sale);
+  else if(S.modal.type==="setupGeofence")body=geofenceSetupModal();
   else if(S.modal.type==="repDetail")body=renderRepDetail(S.modal.name,S.modal.period||S.repPeriod||'week');
   else if(S.modal.type==="customerDetail")body=renderCustomerDetail(S.modal.name);
   else if(S.modal.type==="manageCategories")body=manageCategoriesModal();
