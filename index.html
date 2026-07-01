@@ -2053,10 +2053,37 @@ function renderSettings(){
       <div class="panel-head"><h3>${icon('settings',12)} Change password</h3></div>
       <div style="padding:17px 19px">
         <div class="field"><label>Current password</label><input id="cp-current" type="password" placeholder="Current password"/></div>
-        <div class="field"><label>New password</label><input id="cp-new" type="password" placeholder="New password (min 8 chars)"/></div>
+        <div class="field"><label>New password</label><input id="cp-new" type="password" placeholder="New password (min 6 chars)"/></div>
         <div class="field"><label>Confirm new password</label><input id="cp-confirm" type="password" placeholder="Confirm new password"/></div>
         <div id="cp-msg" style="font-size:12.5px;margin-bottom:10px;min-height:16px"></div>
         <button class="btn btn-primary btn-sm" onclick="changePassword()">${icon("check",12)} Update password</button>
+      </div>
+    </div>
+
+    <!-- Email reports -->
+    <div class="panel">
+      <div class="panel-head">
+        <h3>${icon('wifi',12)} Monthly email reports</h3>
+        <span style="font-size:11px;color:var(--muted)">via Google Apps Script</span>
+      </div>
+      <div style="padding:16px 19px">
+        <div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:14px">
+          Get a full monthly summary — revenue, profit, top products, staff performance, expenses and stock alerts — delivered to your inbox on the 1st of every month.
+        </div>
+        <div class="field">
+          <label>Recipient email</label>
+          <input id="report-email" type="email" placeholder="admin@8fifteenwellness.com"
+            value="${localStorage.getItem('8fw_report_email')||''}"/>
+        </div>
+        <div id="email-msg" style="font-size:12.5px;margin-bottom:12px;min-height:16px"></div>
+        <div style="display:flex;gap:9px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="setupEmailReports()">${icon('check',12)} Setup monthly reports</button>
+          <button class="btn btn-ghost btn-sm" onclick="sendTestEmail()">${icon('wifi',12)} Send test email now</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="removeEmailReports()">${icon('x',11)} Remove trigger</button>
+        </div>
+        <div style="margin-top:14px;padding:12px 14px;background:var(--accent-bg);border-radius:var(--r-sm);font-size:12px;line-height:1.7;color:var(--muted)">
+          <b style="color:var(--ink)">One-time setup:</b> After clicking "Setup monthly reports", go to your Apps Script editor → Run <code style="background:var(--bg);padding:1px 5px;border-radius:4px">setupMonthlyTrigger</code> once to authorise Gmail access. The app will handle the rest automatically.
+        </div>
       </div>
     </div>`;
 }
@@ -2803,6 +2830,46 @@ function delUser(id){
   users=users.filter(x=>x.id!==id);
   sheetPost('deleteUser',{id});
   renderContent();
+}
+
+async function setupEmailReports(){
+  const email=(document.getElementById('report-email')?.value||'').trim();
+  const msg=document.getElementById('email-msg');
+  if(!email||!email.includes('@')){if(msg)msg.innerHTML=`<span style="color:var(--danger)">Enter a valid email address.</span>`;return;}
+  localStorage.setItem('8fw_report_email',email);
+  if(msg)msg.innerHTML=`<span style="color:var(--muted)">Setting up…</span>`;
+  try{
+    const body=new URLSearchParams({action:'setupEmailTrigger',data:JSON.stringify({email})});
+    const r=await fetch(GAS_URL,{method:'POST',body});
+    const d=await r.json();
+    if(d.ok) msg.innerHTML=`<span style="color:var(--success)">✓ Monthly reports configured for ${email}. Run setupMonthlyTrigger in Apps Script to authorise Gmail access.</span>`;
+    else throw new Error(d.error||'Setup failed');
+  }catch(e){if(msg)msg.innerHTML=`<span style="color:var(--danger)">${e.message}</span>`;}
+}
+async function sendTestEmail(){
+  const email=(document.getElementById('report-email')?.value||localStorage.getItem('8fw_report_email')||'').trim();
+  const msg=document.getElementById('email-msg');
+  if(!email){if(msg)msg.innerHTML=`<span style="color:var(--danger)">Enter your email address first.</span>`;return;}
+  if(!GAS_URL){if(msg)msg.innerHTML=`<span style="color:var(--danger)">Connect Google Sheets first.</span>`;return;}
+  if(msg)msg.innerHTML=`<span style="color:var(--muted)">Sending…</span>`;
+  try{
+    const body=new URLSearchParams({action:'sendTestEmail',data:JSON.stringify({email})});
+    const r=await fetch(GAS_URL,{method:'POST',body});
+    const d=await r.json();
+    if(d.ok) msg.innerHTML=`<span style="color:var(--success)">✓ Test report sent to ${email} — check your inbox!</span>`;
+    else throw new Error(d.error||'Send failed');
+  }catch(e){if(msg)msg.innerHTML=`<span style="color:var(--danger)">${e.message}</span>`;}
+}
+async function removeEmailReports(){
+  const msg=document.getElementById('email-msg');
+  if(!GAS_URL){localStorage.removeItem('8fw_report_email');if(msg)msg.innerHTML=`<span style="color:var(--muted)">Email config cleared.</span>`;return;}
+  try{
+    const body=new URLSearchParams({action:'removeEmailTrigger',data:'{}' });
+    const r=await fetch(GAS_URL,{method:'POST',body});
+    const d=await r.json();
+    localStorage.removeItem('8fw_report_email');
+    if(msg)msg.innerHTML=`<span style="color:var(--muted)">Monthly trigger removed.</span>`;
+  }catch(e){if(msg)msg.innerHTML=`<span style="color:var(--danger)">${e.message}</span>`;}
 }
 
 /* ─── Boot ─── */
