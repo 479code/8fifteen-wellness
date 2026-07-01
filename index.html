@@ -745,7 +745,7 @@ const S={
   drawerOpen:false,moreSheetOpen:false,
   invSearch:"",invCat:"All",
   saleRows:[{rowId:"row_1",productId:"",qty:1,search:"",open:false}],payment:"Cash",discount:0,customerName:"",
-  histSearch:"",histFrom:"",histTo:"",histCat:"All",custSearch:"",
+  histSearch:"",histFrom:"",histTo:"",histCat:"All",custSearch:"",repPeriod:"week",
   modal:null, receiptSale:null, showConnectionForm:false, accPeriod:'all',
 };
 
@@ -754,7 +754,7 @@ const N=n=>"₦"+Math.round(n||0).toLocaleString("en-NG");
 const Pct=n=>(isFinite(n)?n:0).toFixed(1)+"%";
 const uid=p=>p+"_"+Math.random().toString(36).slice(2,8);
 const fmt=d=>new Date(d+"T00:00").toLocaleDateString("en-GB",{day:"2-digit",month:"short"});
-const TITLE={dashboard:"Today's overview",inventory:"Inventory",sales:"New Sale",history:"Sales tracker",customers:"Customers",category:"Categories",accounting:"Accounting",reports:"Reports & Analytics",users:"Users",settings:"Settings"};
+const TITLE={dashboard:"Today's overview",inventory:"Inventory",sales:"New Sale",history:"Sales tracker",customers:"Customers",salesreps:"Sales Reps",category:"Categories",accounting:"Accounting",reports:"Reports & Analytics",users:"Users",settings:"Settings"};
 
 /* ── Auth ── */
 const CREDS = [
@@ -899,6 +899,7 @@ function allNavItems(){
     {id:"category",   label:"Categories", icon:"layers"},
   ];
   if(S.role==="admin"){
+    base.push({id:"salesreps",  label:"Sales Reps",  icon:"trend"});
     base.push({id:"reports",    label:"Reports",    icon:"trend"});
     base.push({id:"accounting", label:"Accounts",   icon:"calc"});
     base.push({id:"users",      label:"Users",      icon:"users"});
@@ -1064,6 +1065,7 @@ function renderContent(){
   if(S.view==="dashboard")html=renderDash();
   else if(S.view==="inventory")html=renderInventory();
   else if(S.view==="sales")html=renderSales();
+  else if(S.view==="salesreps"&&S.role==="admin")html=renderSalesReps();
   else if(S.view==="customers")html=renderCustomers();
   else if(S.view==="history")html=renderHistory();
   else if(S.view==="category")html=renderCategory();
@@ -1456,6 +1458,245 @@ function renderCategory(){
       <div class="data-cards" style="padding:10px 12px">
         ${topProds(5).map(t=>`<div class="data-card"><div class="dc-row"><span class="dc-title">${t.name}</span><span class="mono" style="font-weight:700">${N(t.rev)}</span></div><div class="dc-meta">${t.qty} units sold</div></div>`).join("")}
       </div>
+    </div>`;
+}
+
+/* ─── Sales Rep Tracker ─── */
+function getSalesRepStats(periodSales){
+  const map={};
+  periodSales.forEach(s=>{
+    const name=s.staff||'Unknown';
+    if(!map[name]) map[name]={name,revenue:0,profit:0,transactions:0,items:0,sales:[],hours:Array(24).fill(0)};
+    map[name].revenue+=s.total;
+    map[name].profit+=s.profit;
+    map[name].transactions++;
+    map[name].items+=s.items.reduce((a,l)=>a+l.qty,0);
+    map[name].sales.push(s);
+    const hr=parseInt((s.time||'00:00').split(':')[0])||0;
+    map[name].hours[hr]++;
+  });
+  return Object.values(map).sort((a,b)=>b.revenue-a.revenue);
+}
+function repFilterSales(period){
+  if(period==='today') return sales.filter(s=>s.date===TODAY);
+  if(period==='week')  return sales.filter(s=>s.date>=dStr(6));
+  if(period==='month') return sales.filter(s=>s.date>=dStr(29));
+  return sales;
+}
+
+function renderSalesReps(){
+  const period=S.repPeriod||'week';
+  const periodSales=repFilterSales(period);
+  const reps=getSalesRepStats(periodSales);
+  const periods=[['today','Today'],['week','7 Days'],['month','30 Days'],['all','All time']];
+  const maxRev=Math.max(1,...reps.map(r=>r.revenue));
+
+  if(reps.length===0) return`
+    <div style="display:flex;gap:7px;margin-bottom:16px;flex-wrap:wrap">
+      ${periods.map(([k,l])=>`<button class="chip ${period===k?'active':''}" onclick="S.repPeriod='${k}';renderContent()">${l}</button>`).join('')}
+    </div>
+    <div style="background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:48px 24px;text-align:center">
+      <div style="font-size:36px;margin-bottom:12px">📊</div>
+      <div style="font-family:'Bodoni Moda',serif;font-size:18px;font-weight:600;margin-bottom:8px">No sales in this period</div>
+      <div style="font-size:13px;color:var(--muted)">Record sales to see rep performance here.</div>
+    </div>`;
+
+  const totalRev=reps.reduce((s,r)=>s+r.revenue,0);
+  const totalTx=reps.reduce((s,r)=>s+r.transactions,0);
+
+  // Badges
+  const badges={};
+  if(reps.length>0) badges[reps[0].name]='🏆 Top Revenue';
+  const byTx=[...reps].sort((a,b)=>b.transactions-a.transactions);
+  if(byTx[0]&&byTx[0].name!==reps[0]?.name) badges[byTx[0].name]='⚡ Most Sales';
+  const byAvg=[...reps].sort((a,b)=>(b.revenue/b.transactions)-(a.revenue/a.transactions));
+  if(byAvg[0]&&!badges[byAvg[0].name]) badges[byAvg[0].name]='💎 Highest Avg';
+
+  return`
+    <!-- Period tabs -->
+    <div style="display:flex;gap:7px;margin-bottom:16px;flex-wrap:wrap">
+      ${periods.map(([k,l])=>`<button class="chip ${period===k?'active':''}" onclick="S.repPeriod='${k}';renderContent()">${l}</button>`).join('')}
+    </div>
+
+    <!-- Team summary strip -->
+    <div class="stat-grid" style="margin-bottom:16px">
+      <div class="stat-card"><div class="stat-label">Team revenue</div><div class="stat-value" style="margin-top:6px;font-size:17px">${N(totalRev)}</div></div>
+      <div class="stat-card"><div class="stat-label">Transactions</div><div class="stat-value" style="margin-top:6px">${totalTx}</div></div>
+      <div class="stat-card"><div class="stat-label">Active reps</div><div class="stat-value" style="margin-top:6px">${reps.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Top performer</div>
+        <div style="margin-top:6px;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${reps[0]?.name||'—'}</div>
+        <div class="stat-sub">${N(reps[0]?.revenue||0)}</div>
+      </div>
+    </div>
+
+    <!-- Rep cards -->
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">
+      ${reps.map((r,i)=>{
+        const pct=totalRev>0?(r.revenue/totalRev*100):0;
+        const barW=maxRev>0?(r.revenue/maxRev*100):0;
+        const avg=r.transactions>0?Math.round(r.revenue/r.transactions):0;
+        const peakHr=r.hours.indexOf(Math.max(...r.hours));
+        const peakLabel=r.hours[peakHr]>0?`${peakHr}:00–${peakHr+1}:00`:'—';
+        return`<div class="panel" style="margin-bottom:0;cursor:pointer;transition:box-shadow .15s" onclick="openRepDetail('${encodeURIComponent(r.name)}')" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
+          <div style="padding:16px 18px">
+            <!-- Header row -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:36px;height:36px;border-radius:50%;background:${i===0?'var(--accent)':'var(--bg)'};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:${i===0?'var(--accent-ink)':'var(--muted)'};flex-shrink:0">${i+1}</div>
+                <div>
+                  <div style="font-weight:700;font-size:15px">${r.name}</div>
+                  ${badges[r.name]?`<div style="font-size:11px;color:var(--accent);margin-top:1px">${badges[r.name]}</div>`:''}
+                </div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-family:'Bodoni Moda',serif;font-size:20px;font-weight:600">${N(r.revenue)}</div>
+                <div style="font-size:11px;color:var(--muted)">${pct.toFixed(0)}% of team</div>
+              </div>
+            </div>
+
+            <!-- Revenue bar -->
+            <div style="height:6px;background:var(--bg);border-radius:999px;overflow:hidden;margin-bottom:14px">
+              <div style="height:100%;width:${barW.toFixed(0)}%;background:${i===0?'var(--accent)':'var(--line)'};border-radius:999px;transition:width .6s ease"></div>
+            </div>
+
+            <!-- Stat row -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+              ${[
+                ['Transactions', r.transactions],
+                ['Items sold', r.items],
+                ['Avg order', N(avg)],
+                ['Peak hour', peakLabel],
+              ].map(([l,v])=>`<div style="text-align:center;padding:8px 4px;background:var(--surface);border-radius:var(--r-sm)">
+                <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">${l}</div>
+                <div style="font-weight:700;font-size:13px">${v}</div>
+              </div>`).join('')}
+            </div>
+          </div>
+          <div style="padding:8px 18px;border-top:1px solid var(--line);color:var(--accent);font-size:11.5px;display:flex;align-items:center;justify-content:flex-end;gap:4px">View full breakdown ${icon('chevron',11)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <!-- Profit comparison -->
+    ${reps.length>1?`<div class="panel">
+      <div class="panel-head"><h3>Profit contribution</h3></div>
+      <div style="padding:12px 17px">
+        ${reps.map(r=>`<div class="bar-row" style="padding:9px 0">
+          <div class="bar-lbl" style="font-size:12.5px;width:130px">${r.name}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(r.profit/Math.max(1,...reps.map(x=>x.profit))*100).toFixed(0)}%;background:var(--success)"></div></div>
+          <div class="bar-val" style="color:var(--success);width:90px">${N(r.profit)}</div>
+        </div>`).join('')}
+      </div>
+    </div>`:''}`;
+}
+
+function openRepDetail(encodedName){
+  S.modal={type:'repDetail',name:decodeURIComponent(encodedName),period:S.repPeriod||'week'};
+  renderModal();
+}
+
+function renderRepDetail(name,period){
+  const periodSales=repFilterSales(period);
+  const reps=getSalesRepStats(periodSales);
+  const r=reps.find(x=>x.name===name);
+  if(!r) return`<div class="sheet-body"><p style="color:var(--muted)">No data found.</p></div>`;
+
+  const avg=r.transactions>0?Math.round(r.revenue/r.transactions):0;
+  const gm=r.revenue>0?r.profit/r.revenue*100:0;
+  const totalTeamRev=reps.reduce((s,x)=>s+x.revenue,0);
+  const share=totalTeamRev>0?r.revenue/totalTeamRev*100:0;
+  const sortedSales=r.sales.slice().sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+
+  // Top products this rep sells
+  const prodMap={};
+  r.sales.forEach(s=>s.items.forEach(l=>{
+    prodMap[l.name]=(prodMap[l.name]||{name:l.name,qty:0,rev:0});
+    prodMap[l.name].qty+=l.qty; prodMap[l.name].rev+=l.price*l.qty;
+  }));
+  const topRepProds=Object.values(prodMap).sort((a,b)=>b.rev-a.rev).slice(0,5);
+
+  // Peak hours mini chart
+  const maxHr=Math.max(1,...r.hours);
+  const activeHours=r.hours.map((v,i)=>({h:i,v})).filter(x=>x.v>0);
+
+  const periodLabels={today:'Today',week:'Last 7 days',month:'Last 30 days',all:'All time'};
+
+  return`
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div>
+        <h3>${r.name}</h3>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${periodLabels[period]||'All time'}</div>
+      </div>
+      <button class="icon-btn" onclick="closeModal()">${icon('x',13)}</button>
+    </div>
+    <div class="sheet-body" style="padding-bottom:30px">
+
+      <!-- KPI grid -->
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:18px">
+        ${[
+          ['Revenue','var(--ink)',N(r.revenue)],
+          ['Profit','var(--success)',N(r.profit)],
+          ['Transactions','var(--ink)',r.transactions],
+          ['Items sold','var(--ink)',r.items],
+          ['Avg order','var(--ink)',N(avg)],
+          ['Gross margin','var(--success)',Pct(gm)],
+          ['Team share','var(--accent)',Pct(share)],
+        ].map(([l,col,v])=>`
+          <div style="background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">${l}</div>
+            <div style="font-size:17px;font-weight:700;color:${col}">${v}</div>
+          </div>`).join('')}
+      </div>
+
+      <!-- Peak hours -->
+      ${activeHours.length>0?`
+      <div style="margin-bottom:18px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:10px">Peak selling hours</div>
+        <div style="display:flex;align-items:flex-end;gap:4px;height:60px;padding:0 2px">
+          ${r.hours.map((v,h)=>`
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+              <div style="width:100%;background:${v===maxHr&&v>0?'var(--accent)':'var(--line)'};border-radius:3px 3px 0 0;height:${v>0?(v/maxHr*48).toFixed(0):2}px;transition:height .4s ease"></div>
+              ${v>0?`<div style="font-size:8px;color:var(--muted)">${h}</div>`:'<div style="font-size:8px;color:transparent">0</div>'}
+            </div>`).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center">
+          Peak: ${r.hours.indexOf(maxHr)}:00–${r.hours.indexOf(maxHr)+1}:00 (${maxHr} sales)
+        </div>
+      </div>`:''}
+
+      <!-- Top products -->
+      ${topRepProds.length>0?`
+      <div style="margin-bottom:18px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:10px">Top products sold</div>
+        ${topRepProds.map((p,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px">
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="width:20px;height:20px;border-radius:50%;background:var(--${i===0?'accent':'bg'});color:var(--${i===0?'accent-ink':'muted'});font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">${i+1}</span>
+            <span>${p.name}</span>
+          </div>
+          <div style="text-align:right">
+            <div class="mono" style="font-weight:600">${N(p.rev)}</div>
+            <div style="font-size:10.5px;color:var(--muted)">${p.qty} units</div>
+          </div>
+        </div>`).join('')}
+      </div>`:''}
+
+      <!-- Recent sales -->
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:10px">Recent sales (${sortedSales.length})</div>
+      ${sortedSales.slice(0,10).map(s=>`
+        <div style="padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px" onclick="S.modal={type:'receipt',sale:${JSON.stringify(s).replace(/`/g,"'")}};renderModal()">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-weight:600;color:var(--accent)">${s.receipt}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${fmt(s.date)} · ${s.time}${s.customer?' · '+s.customer:''}</div>
+            </div>
+            <div style="text-align:right">
+              <div class="mono" style="font-weight:700">${N(s.total)}</div>
+              <div style="font-size:10.5px;color:var(--accent)">View ${icon('chevron',10)}</div>
+            </div>
+          </div>
+        </div>`).join('')}
+      ${sortedSales.length>10?`<div style="text-align:center;padding:10px;font-size:12px;color:var(--muted)">Showing 10 of ${sortedSales.length} sales</div>`:''}
     </div>`;
 }
 
@@ -2210,6 +2451,7 @@ function renderModal(){
   else if(S.modal.type==="addUser")body=userForm();
   else if(S.modal.type==="moreNav")body=moreNavSheet();
   else if(S.modal.type==="receipt")body=renderReceiptSheet(S.modal.sale);
+  else if(S.modal.type==="repDetail")body=renderRepDetail(S.modal.name,S.modal.period||S.repPeriod||'week');
   else if(S.modal.type==="customerDetail")body=renderCustomerDetail(S.modal.name);
   else if(S.modal.type==="manageCategories")body=manageCategoriesModal();
   else if(S.modal.type==="demoSheet"){
