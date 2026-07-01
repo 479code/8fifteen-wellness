@@ -597,10 +597,85 @@ async function loadFromSheets() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     if (!d.ok) throw new Error(d.error || 'Server error');
-    if (d.products && d.products.length) products = d.products;
-    if (d.sales && d.sales.length) sales = d.sales;
-    if (d.expenses && d.expenses.length) expenses = d.expenses;
-    if (d.users && d.users.length) users = d.users;
+
+    /* ── Sanitize products ── */
+    if (d.products && d.products.length) {
+      products = d.products.map(p => {
+        let name     = String(p.name     || '').trim();
+        let sku      = String(p.sku      || '').trim();
+        let category = String(p.category || '').trim();
+        const cost   = Math.max(0, parseFloat(p.cost)  || 0);
+        const price  = Math.max(0, parseFloat(p.price) || 0);
+        const stock  = Math.max(0, parseInt(p.stock)   || 0);
+        const low    = Math.max(0, parseInt(p.low)     || 5);
+
+        // Fix misaligned columns: if name is a known category and category looks
+        // like a real product name, they were entered in the wrong columns → swap.
+        if (CATS.includes(name) && category && !CATS.includes(category)) {
+          [name, category] = [category, name];
+        }
+        // If category still isn't a known cat, keep whatever was there or default
+        if (!CATS.includes(category)) {
+          // Try to match loosely
+          const match = CATS.find(c => category.toLowerCase().includes(c.toLowerCase()));
+          category = match || CATS[0] || 'General';
+        }
+        // If name ended up empty or same as sku nonsensically, use sku as name
+        if (!name || name === category) name = sku || 'Unnamed product';
+
+        return { ...p, name, sku, category,
+          subcategory: String(p.subcategory||'').trim() || '',
+          cost, price, stock, low };
+      }).filter(p => p.id && p.name && p.price > 0);
+    }
+
+    /* ── Sanitize sales ── */
+    if (d.sales && d.sales.length) {
+      sales = d.sales.filter(s => {
+        const total = parseFloat(s.total) || 0;
+        if (total > 1e10)           return false; // Unix timestamp stored as total
+        if (!s.receipt || s.receipt === 'undefined' || s.receipt === 'null') return false;
+        if (!s.date)                return false;
+        const dt = new Date(s.date + 'T00:00');
+        if (isNaN(dt.getTime()))    return false; // Invalid Date
+        if (dt.getFullYear() < 2020 || dt.getFullYear() > 2099) return false;
+        return true;
+      }).map(s => ({
+        ...s,
+        total:    Math.max(0, parseFloat(s.total)    || 0),
+        cost:     Math.max(0, parseFloat(s.cost)     || 0),
+        profit:   parseFloat(s.profit)  || 0,
+        discount: Math.max(0, parseFloat(s.discount) || 0),
+        items:    Array.isArray(s.items) ? s.items.filter(l => l && l.name) : [],
+        time:     (s.time && s.time !== 'undefined') ? s.time : '00:00',
+        payment:  (s.payment && s.payment !== 'undefined') ? s.payment : 'Cash',
+        staff:    (s.staff && s.staff !== 'undefined') ? s.staff : 'Staff',
+        customer: (s.customer && s.customer !== 'undefined') ? s.customer : '',
+      }));
+    }
+
+    /* ── Sanitize expenses ── */
+    if (d.expenses && d.expenses.length) {
+      expenses = d.expenses.filter(e =>
+        e.id && e.description && parseFloat(e.amount) > 0
+      ).map(e => ({
+        ...e,
+        amount:   Math.max(0, parseFloat(e.amount) || 0),
+        date:     e.date || TODAY,
+        category: e.category || 'Other',
+      }));
+    }
+
+    /* ── Sanitize users ── */
+    if (d.users && d.users.length) {
+      users = d.users.filter(u => u.id && u.name && u.email).map(u => ({
+        ...u,
+        name:  String(u.name).trim(),
+        email: String(u.email).trim(),
+        role:  (u.role && u.role.trim()) ? u.role.trim() : 'Staff',
+      }));
+    }
+
     DB_STATE='live'; renderSyncBadge(); renderContent();
   } catch(e) {
     DB_STATE='error'; renderSyncBadge();
