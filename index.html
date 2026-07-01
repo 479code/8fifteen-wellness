@@ -745,7 +745,7 @@ const S={
   drawerOpen:false,moreSheetOpen:false,
   invSearch:"",invCat:"All",
   saleRows:[{rowId:"row_1",productId:"",qty:1,search:"",open:false}],payment:"Cash",discount:0,customerName:"",
-  histSearch:"",histFrom:"",histTo:"",histCat:"All",
+  histSearch:"",histFrom:"",histTo:"",histCat:"All",custSearch:"",
   modal:null, receiptSale:null, showConnectionForm:false, accPeriod:'all',
 };
 
@@ -754,7 +754,7 @@ const N=n=>"₦"+Math.round(n||0).toLocaleString("en-NG");
 const Pct=n=>(isFinite(n)?n:0).toFixed(1)+"%";
 const uid=p=>p+"_"+Math.random().toString(36).slice(2,8);
 const fmt=d=>new Date(d+"T00:00").toLocaleDateString("en-GB",{day:"2-digit",month:"short"});
-const TITLE={dashboard:"Today's overview",inventory:"Inventory",sales:"Sales entry",history:"Sales tracker",category:"Categories",accounting:"Accounting",reports:"Reports & Analytics",users:"Users",settings:"Settings"};
+const TITLE={dashboard:"Today's overview",inventory:"Inventory",sales:"New Sale",history:"Sales tracker",customers:"Customers",category:"Categories",accounting:"Accounting",reports:"Reports & Analytics",users:"Users",settings:"Settings"};
 
 /* ── Auth ── */
 const CREDS = [
@@ -835,6 +835,35 @@ function topProds(n){
   sales.forEach(s=>s.items.forEach(l=>{if(!m[l.productId])m[l.productId]={name:l.name,qty:0,rev:0};m[l.productId].qty+=l.qty;m[l.productId].rev+=l.price*l.qty;}));
   return Object.values(m).sort((a,b)=>b.rev-a.rev).slice(0,n||5);
 }
+
+function getCustomers(){
+  const map={};
+  sales.forEach(s=>{
+    if(!s.customer||!s.customer.trim()) return;
+    const name=s.customer.trim();
+    const key=name.toLowerCase();
+    if(!map[key]) map[key]={name,totalSpent:0,visits:0,lastDate:'',firstDate:'',prods:{},sales:[]};
+    map[key].totalSpent+=s.total;
+    map[key].visits++;
+    if(!map[key].lastDate||s.date>map[key].lastDate) map[key].lastDate=s.date;
+    if(!map[key].firstDate||s.date<map[key].firstDate) map[key].firstDate=s.date;
+    s.items.forEach(l=>{map[key].prods[l.name]=(map[key].prods[l.name]||0)+l.qty;});
+    map[key].sales.push(s);
+  });
+  return Object.values(map).sort((a,b)=>b.totalSpent-a.totalSpent);
+}
+function topCustomerProduct(c){
+  const entries=Object.entries(c.prods);
+  if(!entries.length) return '—';
+  return entries.sort((a,b)=>b[1]-a[1])[0][0];
+}
+function daysSince(dateStr){
+  if(!dateStr) return null;
+  const d=Math.floor((new Date()-new Date(dateStr+'T00:00'))/(864e5));
+  if(d===0) return 'Today';
+  if(d===1) return 'Yesterday';
+  return d+' days ago';
+}
 function filteredSales(){
   return sales.filter(s=>{
     if(S.histFrom&&s.date<S.histFrom)return false;
@@ -866,6 +895,7 @@ function allNavItems(){
     {id:"inventory",  label:"Inventory",  icon:"box",    badge:lc>0?lc:0},
     {id:"sales",      label:"New Sale",   icon:"cart"},
     {id:"history",    label:"Sales",      icon:"history"},
+    {id:"customers",  label:"Customers",  icon:"users"},
     {id:"category",   label:"Categories", icon:"layers"},
   ];
   if(S.role==="admin"){
@@ -1034,6 +1064,7 @@ function renderContent(){
   if(S.view==="dashboard")html=renderDash();
   else if(S.view==="inventory")html=renderInventory();
   else if(S.view==="sales")html=renderSales();
+  else if(S.view==="customers")html=renderCustomers();
   else if(S.view==="history")html=renderHistory();
   else if(S.view==="category")html=renderCategory();
   else if(S.view==="accounting"&&S.role==="admin")html=renderAccounting();
@@ -1233,10 +1264,16 @@ function renderSales(){
         <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
           <div>
             <div class="s-label">Customer <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
-            <input type="text" placeholder="Customer name"
-              value="${S.customerName||''}"
-              oninput="S.customerName=this.value"
-              style="padding:8px 11px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);color:var(--ink);font-size:14px;width:170px"/>
+            <div style="position:relative">
+              <input type="text" id="cust-input" placeholder="Customer name"
+                value="${S.customerName||''}"
+                autocomplete="off"
+                oninput="S.customerName=this.value;_refreshCustSuggest(this.value)"
+                onfocus="_refreshCustSuggest(this.value)"
+                onblur="setTimeout(()=>{const el=document.getElementById('cust-suggest');if(el)el.style.display='none'},200)"
+                style="padding:8px 11px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);color:var(--ink);font-size:14px;width:170px"/>
+              <div id="cust-suggest" style="display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);z-index:60;max-height:180px;overflow-y:auto"></div>
+            </div>
           </div>
           <div>
             <div class="s-label">Discount %</div>
@@ -1419,6 +1456,152 @@ function renderCategory(){
       <div class="data-cards" style="padding:10px 12px">
         ${topProds(5).map(t=>`<div class="data-card"><div class="dc-row"><span class="dc-title">${t.name}</span><span class="mono" style="font-weight:700">${N(t.rev)}</span></div><div class="dc-meta">${t.qty} units sold</div></div>`).join("")}
       </div>
+    </div>`;
+}
+
+/* ─── Customers ─── */
+function renderCustomers(){
+  const customers=getCustomers();
+  const search=(S.custSearch||'').toLowerCase();
+  const list=search?customers.filter(c=>c.name.toLowerCase().includes(search)):customers;
+  const totalRevFromCust=customers.reduce((s,c)=>s+c.totalSpent,0);
+  const newThisMonth=customers.filter(c=>c.firstDate>=dStr(29)).length;
+  const top=customers[0];
+
+  if(customers.length===0) return`
+    <div style="background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:48px 24px;text-align:center;animation:fadeUp .4s ease both">
+      <div style="font-size:36px;margin-bottom:12px">👥</div>
+      <div style="font-family:'Bodoni Moda',serif;font-size:20px;font-weight:600;margin-bottom:8px">No customers yet</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.7;max-width:340px;margin:0 auto">
+        Customers are automatically tracked when you enter a name on the New Sale screen. Start adding customer names to build your database.
+      </div>
+      <button class="btn btn-primary" style="margin-top:22px" onclick="go('sales')">${icon('cart',13)} Go to New Sale</button>
+    </div>`;
+
+  return`
+    <!-- Summary stats -->
+    <div class="stat-grid" style="margin-bottom:16px">
+      <div class="stat-card"><div class="stat-label">Total customers</div><div class="stat-value" style="margin-top:6px">${customers.length}</div><div class="stat-sub">with named purchases</div></div>
+      <div class="stat-card"><div class="stat-label">New this month</div><div class="stat-value" style="margin-top:6px">${newThisMonth}</div><div class="stat-sub">first purchase ≤ 30 days</div></div>
+      <div class="stat-card"><div class="stat-label">Revenue from named</div><div class="stat-value" style="margin-top:6px;font-size:17px">${N(totalRevFromCust)}</div></div>
+      <div class="stat-card"><div class="stat-label">Top spender</div>
+        <div style="margin-top:6px;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${top?top.name:'—'}</div>
+        <div class="stat-sub">${top?N(top.totalSpent):''}</div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="toolbar" style="margin-bottom:12px">
+      <div class="search-box">${icon('search',14)}<input placeholder="Search customer name…" value="${S.custSearch||''}" oninput="S.custSearch=this.value;renderContent()"/></div>
+    </div>
+
+    <!-- Desktop table -->
+    <div class="panel">
+      <div class="table-wrap"><table><thead><tr>
+        <th>#</th><th>Customer</th><th>Visits</th><th>Total spent</th><th>Avg order</th><th>Top product</th><th>First purchase</th><th>Last seen</th><th></th>
+      </tr></thead><tbody>
+        ${list.length===0?`<tr class="empty-row"><td colspan="9">No customers match.</td></tr>`:
+          list.map((c,i)=>`<tr style="cursor:pointer" onclick="openCustomerDetail('${encodeURIComponent(c.name)}')">
+            <td class="mono" style="color:var(--muted)">${i+1}</td>
+            <td style="font-weight:600">${c.name}</td>
+            <td class="mono">${c.visits}</td>
+            <td class="mono" style="font-weight:700">${N(c.totalSpent)}</td>
+            <td class="mono">${N(Math.round(c.totalSpent/c.visits))}</td>
+            <td style="color:var(--muted);font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${topCustomerProduct(c)}</td>
+            <td class="mono" style="color:var(--muted)">${fmt(c.firstDate)}</td>
+            <td style="color:${c.lastDate===TODAY?'var(--success)':'var(--muted)'};font-size:12px">${daysSince(c.lastDate)}</td>
+            <td>${icon('chevron',12)}</td>
+          </tr>`).join('')}
+      </tbody></table></div>
+    </div>
+
+    <!-- Mobile cards -->
+    <div class="data-cards">
+      ${list.length===0?`<div style="color:var(--muted);text-align:center;padding:24px;font-size:13px">No customers match.</div>`:
+        list.map((c,i)=>`<div class="data-card" style="cursor:pointer" onclick="openCustomerDetail('${encodeURIComponent(c.name)}')">
+          <div class="dc-row">
+            <span style="font-size:15px;font-weight:700">${c.name}</span>
+            <span style="font-size:11px;color:${c.lastDate===TODAY?'var(--success)':'var(--muted)'}">${daysSince(c.lastDate)}</span>
+          </div>
+          <div class="dc-row" style="margin-top:6px"><span class="dc-label">Total spent</span><span class="mono" style="font-weight:700;font-size:15px">${N(c.totalSpent)}</span></div>
+          <div class="dc-row"><span class="dc-label">Visits</span><span class="mono">${c.visits} · avg ${N(Math.round(c.totalSpent/c.visits))}</span></div>
+          <div class="dc-row"><span class="dc-label">Favourite</span><span style="font-size:12px;color:var(--muted)">${topCustomerProduct(c)}</span></div>
+          <div style="color:var(--accent);font-size:11.5px;margin-top:8px">Tap to view history ${icon('chevron',11)}</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function openCustomerDetail(encodedName){
+  const name=decodeURIComponent(encodedName);
+  S.modal={type:'customerDetail', name};
+  renderModal();
+}
+
+function renderCustomerDetail(name){
+  const customers=getCustomers();
+  const c=customers.find(x=>x.name.toLowerCase()===name.toLowerCase());
+  if(!c) return`<div class="sheet-body"><p style="color:var(--muted)">Customer not found.</p></div>`;
+  const avg=Math.round(c.totalSpent/c.visits);
+  const topProdsArr=Object.entries(c.prods).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const sortedSales=c.sales.slice().sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+
+  return`
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div>
+        <h3 style="font-size:18px">${c.name}</h3>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Customer since ${fmt(c.firstDate)}</div>
+      </div>
+      <button class="icon-btn" onclick="closeModal()">${icon('x',13)}</button>
+    </div>
+    <div class="sheet-body" style="padding-bottom:30px">
+      <!-- KPI strip -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:18px">
+        <div style="background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Total spent</div>
+          <div style="font-family:'Bodoni Moda',serif;font-size:18px;font-weight:600">${N(c.totalSpent)}</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Visits</div>
+          <div style="font-family:'Bodoni Moda',serif;font-size:18px;font-weight:600">${c.visits}</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Avg order</div>
+          <div style="font-family:'Bodoni Moda',serif;font-size:18px;font-weight:600">${N(avg)}</div>
+        </div>
+      </div>
+
+      <!-- Last seen -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;margin-bottom:14px">
+        <span style="color:var(--muted)">Last purchase</span>
+        <span style="font-weight:600;color:${c.lastDate===TODAY?'var(--success)':'var(--ink)'}">${daysSince(c.lastDate)} · ${fmt(c.lastDate)}</span>
+      </div>
+
+      <!-- Favourite products -->
+      ${topProdsArr.length>0?`
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:10px">Favourite products</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px">
+        ${topProdsArr.map(([name,qty])=>`
+          <span style="background:var(--accent-bg);border:1px solid var(--accent);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--accent-dark)">
+            ${name} <span style="font-weight:700">×${qty}</span>
+          </span>`).join('')}
+      </div>`:''}
+
+      <!-- Purchase history -->
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:10px">Purchase history</div>
+      ${sortedSales.map(s=>`
+        <div style="padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer" onclick="S.modal={type:'receipt',sale:${JSON.stringify(s).replace(/`/g,"'")}};renderModal()">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--accent)">${s.receipt}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${fmt(s.date)} · ${s.time} · ${s.items.reduce((a,l)=>a+l.qty,0)} items · ${s.payment}</div>
+            </div>
+            <div style="text-align:right">
+              <div class="mono" style="font-weight:700;font-size:14px">${N(s.total)}</div>
+              <div style="font-size:10.5px;color:var(--accent);margin-top:2px">View receipt ${icon('chevron',10)}</div>
+            </div>
+          </div>
+        </div>`).join('')}
     </div>`;
 }
 
@@ -1804,6 +1987,23 @@ function renderReports(){
     </div>`;
 }
 
+function _refreshCustSuggest(txt){
+  const el=document.getElementById('cust-suggest');
+  if(!el) return;
+  const srch=(txt||'').toLowerCase().trim();
+  const known=getCustomers().map(c=>c.name);
+  const matches=srch
+    ? known.filter(n=>n.toLowerCase().includes(srch) && n.toLowerCase()!==srch)
+    : known.slice(0,6);
+  if(!matches.length){el.style.display='none';return;}
+  el.style.display='block';
+  el.innerHTML=matches.map(n=>`
+    <div onmousedown="S.customerName='${n.replace(/'/g,"\\'")}';renderContent()" style="padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line);transition:background .1s"
+      onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+      ${icon('users',11)} ${n}
+    </div>`).join('');
+}
+
 /* ─── Searchable product picker (surgical DOM — no full re-render on type) ─── */
 function openPicker(rowId){
   S.saleRows.forEach(r=>{ if(r.rowId!==rowId) r.open=false; });
@@ -2010,6 +2210,7 @@ function renderModal(){
   else if(S.modal.type==="addUser")body=userForm();
   else if(S.modal.type==="moreNav")body=moreNavSheet();
   else if(S.modal.type==="receipt")body=renderReceiptSheet(S.modal.sale);
+  else if(S.modal.type==="customerDetail")body=renderCustomerDetail(S.modal.name);
   else if(S.modal.type==="manageCategories")body=manageCategoriesModal();
   else if(S.modal.type==="demoSheet"){
     if(!S.loggedIn){ renderDemoSheet(); return; }
