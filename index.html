@@ -2420,9 +2420,56 @@ function regenCode(userId){
   const u=users.find(x=>x.id===userId);
   if(!u) return;
   u.clockCode=genClockCode();
-  sheetPost('addUser',u); // re-sync updated user
+  sheetPost('addUser',u);
   renderContent();
   showToast(`${u.name}'s new code: ${u.clockCode}`);
+}
+function openResetPassword(userId){
+  S.modal={type:'resetPassword',id:userId};
+  renderModal();
+}
+function resetPasswordModal(userId){
+  const u=users.find(x=>x.id===userId);
+  if(!u) return '';
+  return`<div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div>
+        <h3>Reset password</h3>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${u.name} · ${u.role}</div>
+      </div>
+      <button class="icon-btn" onclick="closeModal()">${icon("x",13)}</button>
+    </div>
+    <div class="sheet-body">
+      <div style="background:var(--accent-bg);border-radius:var(--r-sm);padding:12px 14px;font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.7">
+        Setting a new password for <b style="color:var(--ink)">${u.name}</b>. They will use this to log in.
+      </div>
+      <div class="field">
+        <label>New password</label>
+        <input id="rp-new" type="password" placeholder="New password (min 6 characters)"/>
+      </div>
+      <div class="field">
+        <label>Confirm new password</label>
+        <input id="rp-confirm" type="password" placeholder="Confirm new password"/>
+      </div>
+      <div id="rp-msg" style="font-size:12.5px;min-height:18px;margin-bottom:8px"></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveResetPassword('${userId}')">${icon("check",13)} Reset password</button>
+    </div>`;
+}
+function saveResetPassword(userId){
+  const u=users.find(x=>x.id===userId);
+  if(!u) return;
+  const nw=(document.getElementById('rp-new')?.value||'').trim();
+  const cf=(document.getElementById('rp-confirm')?.value||'').trim();
+  const msg=document.getElementById('rp-msg');
+  if(!nw||!cf){if(msg)msg.innerHTML=`<span style="color:var(--danger)">Both fields are required.</span>`;return;}
+  if(nw.length<6){if(msg)msg.innerHTML=`<span style="color:var(--danger)">Password must be at least 6 characters.</span>`;return;}
+  if(nw!==cf){if(msg)msg.innerHTML=`<span style="color:var(--danger)">Passwords do not match.</span>`;return;}
+  STAFF_PASSWORDS[u.email.toLowerCase()]=nw;
+  closeModal();
+  showToast(`${u.name}'s password has been reset`);
 }
 
 /* ─── Users ─── */
@@ -2439,7 +2486,10 @@ function renderUsers(){
           <span style="font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;letter-spacing:.12em;color:var(--accent)">${u.clockCode||'—'}</span>
           ${u.clockCode?`<button class="icon-btn" style="margin-left:8px;width:26px;height:26px" onclick="regenCode('${u.id}')" title="Regenerate code">${icon("refresh",11)}</button>`:''}
         </td>
-        <td><span class="icon-btn" onclick="delUser('${u.id}')">${icon("trash",12)}</span></td>
+        <td style="display:flex;gap:6px">
+          <span class="icon-btn" onclick="openResetPassword('${u.id}')" title="Reset password">${icon("settings",12)}</span>
+          <span class="icon-btn" onclick="delUser('${u.id}')">${icon("trash",12)}</span>
+        </td>
       </tr>`).join("")}
     </tbody></table></div>
     <!-- Mobile cards -->
@@ -2452,8 +2502,9 @@ function renderUsers(){
             <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px">Clock code</div>
             <span style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:700;letter-spacing:.12em;color:var(--accent)">${u.clockCode||'—'}</span>
           </div>
-          <div style="display:flex;gap:7px">
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
             ${u.clockCode?`<button class="btn btn-ghost btn-sm" onclick="regenCode('${u.id}')">${icon("refresh",11)} New code</button>`:''}
+            <button class="btn btn-ghost btn-sm" onclick="openResetPassword('${u.id}')">${icon("settings",11)} Reset password</button>
             <button class="icon-btn" onclick="delUser('${u.id}')">${icon("trash",12)}</button>
           </div>
         </div>
@@ -2953,6 +3004,7 @@ function renderModal(){
   else if(S.modal.type==="moreNav")body=moreNavSheet();
   else if(S.modal.type==="receipt")body=renderReceiptSheet(S.modal.sale);
   else if(S.modal.type==="setupGeofence")body=geofenceSetupModal();
+  else if(S.modal.type==="resetPassword")body=resetPasswordModal(S.modal.id);
   else if(S.modal.type==="repDetail")body=renderRepDetail(S.modal.name,S.modal.period||S.repPeriod||'week');
   else if(S.modal.type==="customerDetail")body=renderCustomerDetail(S.modal.name);
   else if(S.modal.type==="manageCategories")body=manageCategoriesModal();
