@@ -672,7 +672,7 @@ async function loadFromSheets() {
       const seenEmails = new Set();
       users = d.users.filter(u => u.id && u.name && u.email).map(u => {
         const existing = u.clockCode && String(u.clockCode).trim();
-        const code = existing || genClockCode();
+        const code = existing || genClockCode(u.email);
         const mapped = {
           ...u,
           name:      String(u.name).trim(),
@@ -838,11 +838,12 @@ function quickLoginStaff(userId){
   closeModal();
 }
 
-function genClockCode(){
-  const used=users.map(u=>u.clockCode).filter(Boolean);
-  let code;
-  do { code=String(Math.floor(1000+Math.random()*9000)); } while(used.includes(code));
-  return code;
+function genClockCode(email){
+  // Deterministic — always produces the same code for the same email
+  const str=(email||Math.random().toString()).toLowerCase();
+  let hash=0;
+  for(let i=0;i<str.length;i++){hash=((hash<<5)-hash)+str.charCodeAt(i);hash|=0;}
+  return String(1000+Math.abs(hash)%9000);
 }
 const low=()=>products.filter(p=>p.stock<=p.low);
 const stockUnits=()=>products.reduce((s,p)=>s+p.stock,0);
@@ -2428,14 +2429,7 @@ function renderAccounting(){
     </div>`;
 }
 
-function regenCode(userId){
-  const u=users.find(x=>x.id===userId);
-  if(!u) return;
-  u.clockCode=genClockCode();
-  sheetPost('addUser',u);
-  renderContent();
-  showToast(`${u.name}'s new code: ${u.clockCode}`);
-}
+
 function openResetPassword(userId){
   S.modal={type:'resetPassword',id:userId};
   renderModal();
@@ -2496,7 +2490,7 @@ function renderUsers(){
         <td><span class="role-pill ${u.role.toLowerCase()}">${u.role}</span></td>
         <td>
           <span style="font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;letter-spacing:.12em;color:var(--accent)">${u.clockCode||'—'}</span>
-          ${u.clockCode?`<button class="icon-btn" style="margin-left:8px;width:26px;height:26px" onclick="regenCode('${u.id}')" title="Regenerate code">${icon("refresh",11)}</button>`:''}
+
         </td>
         <td style="display:flex;gap:6px">
           <span class="icon-btn" onclick="openResetPassword('${u.id}')" title="Reset password">${icon("settings",12)}</span>
@@ -2515,7 +2509,7 @@ function renderUsers(){
             <span style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:700;letter-spacing:.12em;color:var(--accent)">${u.clockCode||'—'}</span>
           </div>
           <div style="display:flex;gap:7px;flex-wrap:wrap">
-            ${u.clockCode?`<button class="btn btn-ghost btn-sm" onclick="regenCode('${u.id}')">${icon("refresh",11)} New code</button>`:''}
+
             <button class="btn btn-ghost btn-sm" onclick="openResetPassword('${u.id}')">${icon("settings",11)} Reset password</button>
             <button class="icon-btn" onclick="delUser('${u.id}')">${icon("trash",12)}</button>
           </div>
@@ -3357,7 +3351,7 @@ function saveUser(){
   const pass=(document.getElementById("f-u-pass")?.value||"staff123").trim()||"staff123";
   if(!name||!email){alert("Name and email required.");return;}
   if(pass.length<6){alert("Password must be at least 6 characters.");return;}
-  const clockCode=genClockCode();
+  const clockCode=genClockCode(email);
   const u={id:uid("u"),name,email,role,clockCode};
   users.push(u);
   STAFF_PASSWORDS[email.toLowerCase()]=pass;
