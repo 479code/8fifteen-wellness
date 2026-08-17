@@ -700,13 +700,15 @@ async function sheetPost(action, data) {
   try {
     const body = new URLSearchParams({action, data: JSON.stringify(data)});
     const r = await fetch(GAS_URL, {method:'POST', body});
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) throw new Error('Server error (HTTP ' + r.status + ')');
     const d = await r.json();
     if (!d.ok) throw new Error(d.error || 'Write error');
     DB_STATE='live';
   } catch(e) {
     DB_STATE='error';
-    console.warn('Sheets write error:', e.message);
+    renderSyncBadge();
+    showToast('⚠ Sync failed: ' + e.message);
+    console.warn('Sheets write error:', action, e.message);
   } finally {
     SYNC_PENDING = Math.max(0, SYNC_PENDING-1);
     renderSyncBadge();
@@ -777,9 +779,11 @@ const STAFF_PASSWORDS = {}; // email → password (defaults to "staff123" if not
 
 function tryLogin(email, pw){
   const e = email.toLowerCase().trim();
+  // Check hardcoded admin credentials first
   const cred = CREDS.find(c=>c.email.toLowerCase()===e && c.password===pw);
   if(cred) return {name:cred.name, email:cred.email, role:cred.role};
-  const u = users.find(u=>u.email.toLowerCase()===e && u.role==="Staff");
+  // Check ALL users added via the Users panel (Staff AND Admin roles)
+  const u = users.find(u=>u.email.toLowerCase()===e);
   if(u){
     const expected = STAFF_PASSWORDS[u.email.toLowerCase()] || "staff123";
     if(pw===expected) return {name:u.name, email:u.email, role:u.role};

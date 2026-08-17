@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "artful-turbine-424313-n9",
+  "private_key_id": "31c5143d37d2ec4f25f8a08275ab0c0b60edf920",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD88SvQo2nbUCnr\nGNLigW4FBHXf9yTkrw98v3rEBvGivtQ/yqgo4aEJLcyNfJlPxSljIllOOuSF2JlB\n3bluqkW4W+8/1zBM6oXWh9VC6jfUf7oJNjkckbK6qBJiwyGZYTmBZojQAD3nyGs/\nvGENHQo1Re+q44ec7ouRiLReVWlqR4O5mWLFELgbZvd/p9r2jk/4Dk5/2Dbng004\nUvNxV7H3Jux9/yq3seUnrLjgKD11tvcVX0FvAPxGjBbL3SVmcuqjs6/h1IaQL1d2\nBey8K/rVsn2Dsj0jSbNK/jEJ5ZvXNAFNvk5Ri2vYFzIYk7yoEUC4QCEdwJg/SJky\nHBpxhaOfAgMBAAECggEAJTwdbpO3wAyvdwfK94QFHaD39zXLDQ0GMx9+43+AL6x2\n00MyeP4p9g9zZrqaWQdVnd3PFriNrnRhrzQEGZngNJD4CcZUOmZluFx7lOOkv1fk\nG3oLczyxek/GkRpXhlwtGnLtHe2DL20t+I5zHPqS55+5dccTzhLBofVlU+Ov5nCA\ntLJqpTmCtBoz9TiS2Hy8JypptA2owK+eHg8Q588dgm1CMEdiS/VI85eY66kzLLqZ\nw0L6OtTpAM/OxcoNIkLK2AOCJQ4AQXiKV1Y/mbiWoXSu3mDxXYA2wUX3/nXKteTV\nRfx0p6LheH9ugY9oT4GdemjvQt/2+dVn8sHqyK9pyQKBgQD+x+wxjmbbDxbl3VIh\nO5JJ4xYA/WCIcSv8VETWblnXDuc80uif8t6cJPrVUz0hz4wMYo9mkwthFHR8hg+G\nMYb6w3EuD4jHJDfr0lIyhiRzEManmwhctMWcs3IEjuTWmhrtZylQtb7Y/I/HgkFe\nlR30PUrNhSF46gmoAuGnTFOnxwKBgQD+Jv8BRgzGpjUHGgIwvWxv6FlVNK7GKZdI\n4sAB5VZ5jD5X1dJDuX4YhTiYaKDJavki+9FQiQ8mohb6EBLhmmvf4V1sTLMfDlQd\nDucPzTx46+gZR8+oFdiOi6P4CQNCoGsv37CjA68kogC8aMNHZt7XI+Xnqynu0YOf\nF80YrvmVaQKBgQCYio5JpV7DrScifP4dU5NklYepFArl5gxVyQZl9C/p6MxdyFDq\n4viRODrN2kZxpdfN2nzNByD7AMo1e/Zze9e676Ul1Lspr++jS4tXIKVWFyc5VkMN\nblYaWf3b6MnuCtowZWGBJy+arqxO4RfOTy1d/Ax7PEgsIsOhSghcqAA2JQKBgDEK\niU5PnAuA6t6R8DZDdvcpGIPOhKMMR3ry9iXngQY3P5hnVAlpc6F7o24VUmFLWQOd\nH8iwidHkmRZrn5kU2Rf8PrC1JCMr+qMYyxFLgw26R7EJIFLI1F69J0inRI/IsKYu\nPcFW5qbk88tnU7clbH6LGMPZTWAd4Y4DY7oNmW9xAoGBAPRrukX3cLqrkr7zTk7I\nDnwfPrW10Ipiz3T3f5+dBw/zUBs2WMc/ALqSrAk52SEdY9P+l2Th8bkvK58Y65+v\nV6b6zBJwoi/lr6JtT/T+0EQ7ZYnMCevp40eFaXqf5e567ITq7OQGp7xm1NzfQqTj\n9GWo8fdsMu1XSebTS4IrciCh\n-----END PRIVATE KEY-----\n",
+  "client_email": "id-fifteen-inventory-app@artful-turbine-424313-n9.iam.gserviceaccount.com",
+  "client_id": "109168482933462534238",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/id-fifteen-inventory-app%40artful-turbine-424313-n9.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
