@@ -14,8 +14,22 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    const action = e.parameter.action;
-    const data   = JSON.parse(e.parameter.data || '{}');
+    // Handle both e.parameter (form POST) and e.postData.contents (raw body)
+    let action, data;
+    if (e.parameter && e.parameter.action) {
+      action = e.parameter.action;
+      data   = JSON.parse(e.parameter.data || '{}');
+    } else if (e.postData && e.postData.contents) {
+      const params = {};
+      e.postData.contents.split('&').forEach(pair => {
+        const [k, v] = pair.split('=').map(s => decodeURIComponent(s.replace(/\+/g,' ')));
+        params[k] = v;
+      });
+      action = params.action;
+      data   = JSON.parse(params.data || '{}');
+    } else {
+      return ok({ok:false, error:'No action received'});
+    }
 
     if (action === 'addProduct')     return ok(addRow('Products', productRow(data)));
     if (action === 'updateProduct')  return ok(updateRow('Products', data.id, productRow(data)));
@@ -25,7 +39,7 @@ function doPost(e) {
     if (action === 'logStock')       return ok(addRow('StockLog', [data.id,data.productId,data.name,data.qty,data.reason,data.time,data.date]));
     if (action === 'addExpense')     return ok(addRow('Expenses', [data.id,data.date,data.description,data.category,data.amount]));
     if (action === 'deleteExpense')  return ok(deleteRow('Expenses', data.id));
-    if (action === 'addUser')        return ok(addRow('Users', [data.id,data.name,data.email,data.role]));
+    if (action === 'addUser')        return ok(addRow('Users', [data.id,data.name,data.email,data.role,data.clockCode||'']));
     if (action === 'deleteUser')     return ok(deleteRow('Users', data.id));
     if (action === 'addAttendance')  return ok(addRow('Attendance', [
       data.id, data.staffName, data.staffEmail||'', data.type,
@@ -70,7 +84,7 @@ function getAllData() {
     products: readSheet('Products', ['id','sku','name','category','cost','price','stock','low','subcategory']),
     sales:    readSales(),
     expenses: readSheet('Expenses', ['id','date','description','category','amount']),
-    users:    readSheet('Users',    ['id','name','email','role']),
+    users:    readSheet('Users',    ['id','name','email','role','clockCode']),
     attendance: readSheet('Attendance', ['id','staffName','staffEmail','type','date','time','lat','lng','distance','withinFence','manual']),
   };
 }

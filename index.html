@@ -670,13 +670,20 @@ async function loadFromSheets() {
     /* ── Sanitize users ── */
     if (d.users && d.users.length) {
       const seenEmails = new Set();
-      users = d.users.filter(u => u.id && u.name && u.email).map(u => ({
-        ...u,
-        name:      String(u.name).trim(),
-        email:     String(u.email).trim(),
-        role:      (u.role && u.role.trim()) ? u.role.trim() : 'Staff',
-        clockCode: u.clockCode || genClockCode(),
-      })).filter(u => {
+      users = d.users.filter(u => u.id && u.name && u.email).map(u => {
+        const existing = u.clockCode && String(u.clockCode).trim();
+        const code = existing || genClockCode();
+        const mapped = {
+          ...u,
+          name:      String(u.name).trim(),
+          email:     String(u.email).trim(),
+          role:      (u.role && u.role.trim()) ? u.role.trim() : 'Staff',
+          clockCode: code,
+        };
+        // If no code was in the sheet, save it back so it persists
+        if (!existing) sheetPost('addUser', mapped);
+        return mapped;
+      }).filter(u => {
         const key = u.email.toLowerCase();
         if (seenEmails.has(key)) return false;
         seenEmails.add(key);
