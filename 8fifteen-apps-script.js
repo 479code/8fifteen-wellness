@@ -40,7 +40,7 @@ function doPost(e) {
     if (action === 'addExpense')     return ok(addRow('Expenses', [data.id,data.date,data.description,data.category,data.amount]));
     if (action === 'deleteExpense')  return ok(deleteRow('Expenses', data.id));
     if (action === 'addUser')        return ok(addRow('Users', [data.id,data.name,data.email,data.role,data.clockCode||'']));
-    if (action === 'deleteUser')     return ok(deleteRow('Users', data.id));
+    if (action === 'deleteUser')     return ok(deleteRow('Users', data.id, data.email));
     if (action === 'addAttendance')  return ok(addRow('Attendance', [
       data.id, data.staffName, data.staffEmail||'', data.type,
       data.date, data.time, data.lat||'', data.lng||'',
@@ -128,11 +128,13 @@ function updateRow(sheetName, id, rowData) {
   }
   return {notFound: true};
 }
-function deleteRow(sheetName, id) {
+function deleteRow(sheetName, id, emailFallback) {
   const sh = getSheet(sheetName);
   const rows = sh.getDataRange().getValues();
   for (let i = rows.length - 1; i >= 1; i--) {
-    if (rows[i][0] == id) { sh.deleteRow(i+1); return {deleted:true}; }
+    const matchId    = String(rows[i][0]).trim() === String(id).trim();
+    const matchEmail = emailFallback && String(rows[i][2]).trim().toLowerCase() === String(emailFallback).trim().toLowerCase();
+    if (matchId || matchEmail) { sh.deleteRow(i+1); return {deleted:true}; }
   }
   return {notFound: true};
 }

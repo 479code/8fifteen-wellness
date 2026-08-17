@@ -680,8 +680,7 @@ async function loadFromSheets() {
           role:      (u.role && u.role.trim()) ? u.role.trim() : 'Staff',
           clockCode: code,
         };
-        // If no code was in the sheet, save it back so it persists
-        if (!existing) sheetPost('addUser', mapped);
+        // Code is deterministic — no need to write back, same email = same code always
         return mapped;
       }).filter(u => {
         const key = u.email.toLowerCase();
@@ -747,9 +746,7 @@ function syncCats(){ CATS=CATS_DATA.map(c=>c.name); CAT_CLR=Object.fromEntries(C
 
 /* ── Data — starts empty, populated from Google Sheets or manual entry ── */
 let products = [];
-let users    = [
-  {id:"u1",name:"Uthman Muhammad",email:"admin@8fifteenwellness.com",role:"Admin",clockCode:"0000"},
-];
+let users    = []; // populated from sheet; hardcoded admin always accessible via CREDS
 function dStr(n){const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10);}
 const TODAY=dStr(0), YDAY=dStr(1);
 let sales      = [];
@@ -3362,8 +3359,8 @@ function delUser(id){
   const u=users.find(x=>x.id===id);if(!u)return;
   if(!confirm(`Remove ${u.name}?`))return;
   users=users.filter(x=>x.id!==id);
-  sheetPost('deleteUser',{id});
-  renderContent();
+  sheetPost('deleteUser',{id, email:u.email});
+  renderContent();showToast(`${u.name} removed`);
 }
 
 async function setupEmailReports(){
