@@ -702,7 +702,7 @@ async function sheetPost(action, data) {
     const r = await fetch(GAS_URL, {method:'POST', body});
     if (!r.ok) throw new Error('Server error (HTTP ' + r.status + ')');
     const d = await r.json();
-    if (!d.ok) throw new Error(d.error || 'Write error');
+    if (!d.ok || d.error) throw new Error(d.error || 'Write error');
     DB_STATE='live';
   } catch(e) {
     DB_STATE='error';
@@ -793,9 +793,10 @@ function tryLogin(email, pw){
 function doLogin(user){
   S.loggedIn=true; S.currentUser=user;
   S.role = user.role.toLowerCase();
+  localStorage.setItem('8fw_session', JSON.stringify({user, role: S.role}));
   render();
   if(GAS_URL) loadFromSheets();
-}function doLogout(){ S.loggedIn=false; S.currentUser=null; S.view="dashboard"; render(); }
+}function doLogout(){ S.loggedIn=false; S.currentUser=null; S.view="dashboard"; localStorage.removeItem('8fw_session'); render(); }
 function changePassword(){
   const cur  = (document.getElementById("cp-current").value||"").trim();
   const nw   = (document.getElementById("cp-new").value||"").trim();
@@ -3406,7 +3407,20 @@ async function removeEmailReports(){
 
 /* ─── Boot ─── */
 applyTheme();
-render(); // shows login screen since S.loggedIn is false
+// Restore saved session on page load
+(function(){
+  try{
+    const saved = localStorage.getItem('8fw_session');
+    if(saved){
+      const {user, role} = JSON.parse(saved);
+      if(user && user.email){
+        S.loggedIn=true; S.currentUser=user; S.role=role||'admin';
+      }
+    }
+  }catch(e){ localStorage.removeItem('8fw_session'); }
+})();
+render();
+if(S.loggedIn && GAS_URL) loadFromSheets();
 </script>
 </body>
 </html>
